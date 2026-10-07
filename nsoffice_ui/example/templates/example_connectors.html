@@ -1,0 +1,22 @@
+{% extends "nsoffice/base.html" %}
+{% from "nsoffice/macros.html" import page_header, catalog %}
+{% set active_nav = 'hive' %}
+
+{% block content %}
+<section class="page-view catalog-page active-view">
+    {{ page_header('Connectors', back_href='/hive') }}
+    {{ catalog(sections,
+               hero={'heading': 'Bring your tools in.', 'accent': 'Work where your context lives.',
+                     'subtext': 'Connect the apps your team already uses so every Bee can read from them and act in them.'},
+               filters=filters, search_placeholder='Find a connector', on_open='openConnector', button_label='Connect') }}
+</section>
+{% endblock %}
+
+{% block body_end %}
+<script>
+    // Card click -> its detail page. Slugs come from the card title ("Google Drive" -> "google-drive").
+    function openConnector(title) {
+        window.location.href = '/connector/' + title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    }
+</script>
+{% endblock %}

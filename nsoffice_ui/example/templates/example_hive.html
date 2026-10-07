@@ -1,0 +1,13 @@
+{% extends "nsoffice/base.html" %}
+{% from "nsoffice/macros.html" import page_header, hub_cards %}
+{% set active_nav = 'hive' %}
+
+{% block content %}
+<section class="page-view active-view">
+    {{ page_header('HIVE', back_href='/home') }}
+    {{ hub_cards([
+        {'title': 'Bees', 'desc': 'Explore AI-powered Bees by category', 'icon': 'fa-solid fa-wand-magic-sparkles', 'color': 'purple'},
+        {'title': 'Connectors', 'desc': 'Connect and manage your integrations', 'icon': 'fa-solid fa-bolt', 'color': 'blue', 'href': '/hive/connectors'},
+    ]) }}
+</section>
+{% endblock %}

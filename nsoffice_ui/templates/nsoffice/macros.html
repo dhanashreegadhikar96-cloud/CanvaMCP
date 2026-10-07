@@ -1,0 +1,231 @@
+{#- NSOffice UI — page components.
+
+    {% from "nsoffice/macros.html" import page_header, hub_cards, catalog, composer %}
+
+page_header(title, back_href=None, back_view=None)
+hub_cards(cards)        cards: [{title, desc, icon (Font Awesome classes), color: "purple"|"blue", href?, view?}]
+catalog(sections, ...)  sections: [{category, title, groups: [{name, items: [{icon, title, desc, color?, category?, href?}]}]}]
+    items               instead of sections: one flat grid; each item has its own category (Hive > Connectors)
+    hero                {heading, accent, subtext, image, image_alt}
+    filters             [{category, label}]  ("All" is added automatically)
+    search_placeholder  text in the search box; None hides the search box
+    on_open             name of a JS function called with the item title when a card is clicked
+    button_label        text on each card's button
+    banner              {visual_icon, columns: [{icon, title?, text, accent?, text_after?}]}
+composer(...)           home page: heading, prompt cards, ask bar with the bee tools menu
+    heading             big question above the prompt cards
+    prompts             [{title, desc, prompt?}]  (a click puts `prompt` in the ask bar)
+    connectors          [{icon, title, label?, color?, href?}]  chips in the menu's Connectors flyout
+    placeholder         ask bar placeholder: say what to do now
+    menu                [{label, icon (Lucide), flyout?: "connectors", href?}]  default: Models, Connectors, AI Tools
+Item icons: a Lucide icon name ("search", "chart-column", ...), "bee", or Font Awesome classes ("fa-solid fa-bolt").
+Item colours (icon tiles): purple, indigo, blue, teal, green, red, amber, slate. An item with an href opens it
+(via shell.js); items without one are clickable but go nowhere. -#}
+
+{% macro page_header(title, back_href=None, back_view=None) -%}
+<div class="view-header">
+    {%- if back_href %}
+    <a href="{{ back_href }}"{% if back_view %} data-view="{{ back_view }}"{% endif %} class="back-btn">
+        <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    {%- endif %}
+    <span class="view-header-title">{{ title }}</span>
+</div>
+{%- endmacro %}
+
+
+{% macro hub_cards(cards) -%}
+<div class="hub-cards">
+    {%- for card in cards %}
+    {%- set tag = 'a' if card.href else 'div' %}
+    <{{ tag }} class="hub-card"{% if card.href %} href="{{ card.href }}"{% endif %}{% if card.view %} data-view="{{ card.view }}"{% endif %}>
+        <div class="hub-card-icon hub-card-icon--{{ card.color|default('purple') }}">
+            <i class="{{ card.icon }}"></i>
+        </div>
+        <div class="hub-card-title">{{ card.title }}</div>
+        <div class="hub-card-desc">{{ card.desc }}</div>
+    </{{ tag }}>
+    {%- endfor %}
+</div>
+{%- endmacro %}
+
+
+{% macro item_icon(name) -%}
+{%- if name == 'bee' -%}
+<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+    <ellipse cx="8" cy="8.5" rx="4" ry="2.6" fill="#94a3b8" transform="rotate(-35 8 8.5)" />
+    <ellipse cx="16" cy="8.5" rx="4" ry="2.6" fill="#94a3b8" transform="rotate(35 16 8.5)" />
+    <ellipse cx="12" cy="14" rx="4.2" ry="6" fill="#1e293b" />
+    <path d="M8.2 12.6h7.6M8 15.6h8" stroke="#cbd5e1" stroke-width="1.2" />
+</svg>
+{%- elif name.startswith('fa-') -%}
+<i class="{{ name }}"></i>
+{%- else -%}
+<i data-lucide="{{ name }}"></i>
+{%- endif -%}
+{%- endmacro %}
+
+
+{% macro context_banner(banner) -%}
+<div class="context-banner">
+    <div class="context-banner-visual"><i class="{{ banner.visual_icon|default('fa-solid fa-layer-group') }}"></i></div>
+    {%- for col in banner.columns %}
+    <div class="context-banner-col{% if not col.title %} context-banner-col-center{% endif %}"><i data-lucide="{{ col.icon }}" class="context-banner-icon"></i>
+        {%- if col.title %}
+        <div>
+            <div class="context-banner-title">{{ col.title }}</div>
+            <div class="context-banner-text">{{ col.text }}</div>
+        </div>
+        {%- else %}
+        <div class="context-banner-text">{{ col.text }}{% if col.accent %} <span class="context-banner-accent">{{ col.accent }}</span>{% endif %}{{ col.text_after|default('') }}</div>
+        {%- endif %}
+    </div>
+    {%- endfor %}
+</div>
+{%- endmacro %}
+
+
+{% macro catalog(sections=None, hero=None, filters=None, search_placeholder='Search', on_open=None, button_label='Open', banner=None, items=None) -%}
+{%- if items %}{% set sections = [{'category': '', 'title': '', 'groups': [{'name': '', 'items': items}]}] %}{% endif %}
+<div class="catalog">
+    {%- if hero %}
+    <div class="catalog-hero">
+        <div class="catalog-hero-content">
+            <h1 class="catalog-hero-heading">
+                {{ hero.heading }}
+                {% if hero.accent %}<span class="catalog-hero-accent">{{ hero.accent }}</span>{% endif %}
+            </h1>
+            {%- if hero.subtext %}
+            <p class="catalog-hero-subtext">{{ hero.subtext }}</p>
+            {%- endif %}
+        </div>
+        {%- if hero.image %}
+        <img src="{{ hero.image }}" alt="{{ hero.image_alt|default('') }}" class="catalog-hero-visual">
+        {%- endif %}
+    </div>
+    {%- endif %}
+
+    {%- if search_placeholder %}
+    <div class="catalog-search">
+        <i class="fa-solid fa-magnifying-glass catalog-search-icon"></i>
+        <input type="text" class="catalog-search-input" placeholder="{{ search_placeholder }}" aria-label="{{ search_placeholder }}">
+    </div>
+    {%- endif %}
+
+    {%- if filters %}
+    <div class="catalog-pills">
+        <button type="button" class="catalog-pill active" data-category="all">All</button>
+        {%- for f in filters %}
+        <button type="button" class="catalog-pill" data-category="{{ f.category }}">{{ f.label }}</button>
+        {%- endfor %}
+    </div>
+    {%- endif %}
+
+    {%- for section in sections %}
+    <div class="catalog-section" data-category="{{ section.category }}">
+        {%- if section.title %}<div class="catalog-section-title">{{ section.title }}</div>{% endif %}
+        {%- for group in section.groups %}
+        <div class="catalog-group">
+            {%- if group.name %}<div class="catalog-group-title">{{ group.name }}</div>{% endif %}
+            <div class="catalog-grid">
+                {%- for item in group['items'] %}
+                <div class="catalog-card" data-item="{{ item.title }}" data-category="{{ item.category|default(section.category) }}"
+                    {%- if item.href %} data-view="item" data-href="{{ item.href }}"{% elif on_open %} onclick="{{ on_open }}(this.dataset.item)"{% endif %}>
+                    <div class="catalog-card-icon{% if item.color %} ns-tile ns-tile--{{ item.color }}{% endif %}">{{ item_icon(item.icon) }}</div>
+                    <div class="catalog-card-title">{{ item.title }}</div>
+                    <div class="catalog-card-desc">{{ item.desc }}</div>
+                    <button type="button" class="catalog-card-btn">{{ button_label }}</button>
+                </div>
+                {%- endfor %}
+            </div>
+        </div>
+        {%- endfor %}
+    </div>
+    {%- endfor %}
+
+    {%- if banner %}
+    {{ context_banner(banner) }}
+    {%- endif %}
+</div>
+{%- endmacro %}
+
+
+{% macro bee_mark(size=34) -%}
+<svg xmlns="http://www.w3.org/2000/svg" width="{{ size }}" height="{{ size }}" viewBox="0 0 28 28" aria-hidden="true">
+    <path d="M14 22C14 22 5.5 17 5.5 11.2C5.5 7.8 8.2 5.5 11 5.5C12.6 5.5 13.5 6.3 14 7.2C14.5 6.3 15.4 5.5 17 5.5C19.8 5.5 22.5 7.8 22.5 11.2C22.5 17 14 22 14 22Z" fill="#A6B0F6" />
+    <path d="M14 20.5C14 20.5 7 16.2 7 11.5C7 8.8 9 7 11 7C12.3 7 13.3 7.8 14 8.5C14.7 7.8 15.7 7 17 7C19 7 21 8.8 21 11.5C21 16.2 14 20.5 14 20.5Z" fill="#8391F2" opacity="0.35" />
+    <path d="M12.5 6.5L10.5 3.5" stroke="#4E62ED" stroke-width="1.8" stroke-linecap="round" />
+    <path d="M15.5 6.5L17.5 3.5" stroke="#4E62ED" stroke-width="1.8" stroke-linecap="round" />
+    <circle cx="14" cy="7.8" r="2" fill="#4E62ED" />
+    <path d="M11.5 10.2C11.5 9.5 12.3 9 14 9C15.7 9 16.5 9.5 16.5 10.2V16.8C16.5 18.5 15.2 19.8 14 19.8C12.8 19.8 11.5 18.5 11.5 16.8V10.2Z" fill="#4E62ED" />
+    <rect x="8.5" y="12" width="11" height="1.8" rx="0.9" fill="#5467EE" />
+    <rect x="9.5" y="14.3" width="9" height="1.8" rx="0.9" fill="#6072EF" />
+    <rect x="10.8" y="16.6" width="6.4" height="1.8" rx="0.9" fill="#6678EF" />
+</svg>
+{%- endmacro %}
+
+
+{% set COMPOSER_MENU = [
+    {'label': 'Models', 'icon': 'cpu'},
+    {'label': 'Connectors', 'icon': 'plug', 'flyout': 'connectors'},
+    {'label': 'AI Tools', 'icon': 'wand-sparkles'},
+] %}
+
+{% macro composer(heading='What would you like to work on today?', prompts=[], connectors=[], placeholder='What are we working on today?', menu=None) -%}
+<div class="composer">
+    <div class="composer-welcome">
+        <h1 class="composer-heading">{{ heading }}</h1>
+        {%- if prompts %}
+        <div class="composer-prompts">
+            {%- for p in prompts %}
+            <div class="composer-prompt" data-prompt="{{ p.prompt|default(p.title ~ ': ' ~ p.desc) }}">
+                <div class="composer-prompt-title">{{ p.title }}</div>
+                <div class="composer-prompt-desc">{{ p.desc }}</div>
+            </div>
+            {%- endfor %}
+        </div>
+        {%- endif %}
+    </div>
+
+    <div class="composer-bar-area">
+        <div class="composer-bar">
+            <button type="button" class="composer-bee" title="Tools" aria-haspopup="true" aria-expanded="false">{{ bee_mark() }}</button>
+
+            <div class="composer-menu">
+                {%- for m in (menu or COMPOSER_MENU) %}
+                <button type="button" class="composer-menu-item"{% if m.flyout %} data-flyout="composer-flyout-{{ m.flyout }}"{% endif %}{% if m.href %} data-view="item" data-href="{{ m.href }}"{% endif %}>
+                    <span><i data-lucide="{{ m.icon }}"></i> {{ m.label }}</span>
+                    {%- if not m.flyout %}<i class="fa-solid fa-chevron-right composer-menu-chevron"></i>{% endif %}
+                </button>
+                {%- endfor %}
+                {%- if connectors %}
+                <div class="composer-flyout" id="composer-flyout-connectors">
+                    {%- for c in connectors %}
+                    <button type="button" class="composer-chip"{% if c.href %} data-view="item" data-href="{{ c.href }}"{% endif %}>
+                        <span class="ns-tile ns-tile--{{ c.color|default('slate') }}">{{ item_icon(c.icon) }}</span>
+                        {{ c.label|default(c.title) }}
+                    </button>
+                    {%- endfor %}
+                </div>
+                {%- endif %}
+            </div>
+
+            <input type="text" class="composer-input" placeholder="{{ placeholder }}" aria-label="{{ placeholder }}">
+
+            <button type="button" class="composer-icon-btn" title="Attach a document"><i data-lucide="paperclip"></i></button>
+            <button type="button" class="composer-icon-btn" title="Voice input"><i data-lucide="mic"></i></button>
+            <button type="button" class="composer-send" title="Send"><i data-lucide="send"></i></button>
+        </div>
+
+        {{ disclaimer() }}
+    </div>
+</div>
+{%- endmacro %}
+
+
+{% macro disclaimer() -%}
+<div class="composer-disclaimer">
+    <span class="ns-logo-inline">NS<svg xmlns="http://www.w3.org/2000/svg" width="44" height="14" viewBox="0 0 44 14" aria-hidden="true"><rect x="0" y="0.5" width="44" height="13" rx="6.5" fill="#2d3748" /><circle cx="36" cy="7" r="4" fill="#ffffff" /></svg>Office.AI</span>
+    <span>is an AI and can make mistakes. Check important info.</span>
+</div>
+{%- endmacro %}

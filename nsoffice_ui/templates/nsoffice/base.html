@@ -1,0 +1,193 @@
+{#- NSOffice UI — the shared shell.
+
+Extend it:   {% extends "nsoffice/base.html" %}
+Page variables (set before or after the extends line):
+    active_nav           key of the highlighted sidebar item ("home", "hive", ...)
+    sidebar_admin_open   true hides Recent Chats (used while the admin section is showing)
+    hide_top_bar         true leaves out the top bar (production's Hive and Connectors pages have none)
+Blocks:
+    title, head                     <title>, extra <head> tags (app stylesheets/scripts)
+    sidebar_extra                   between the nav and Recent Chats (e.g. an admin section)
+    recent_chats                    replace the Recent Chats list
+    profile_menu_extra              extra profile-menu items before "Sign out"
+    top_bar_start                   left side of the top bar: a page title chip (e.g. an assistant's
+                                    "Canva Assistant" chip in <div class="top-bar-start">). Labels only, no controls.
+    top_bar                         contents of the top bar (default: NU credit pill)
+    content                         the page, inside <main>
+    body_end                        after the layout (modals, toasts, page scripts)
+Settings come from app.config["NSOFFICE_UI"] (see nsoffice_ui/__init__.py DEFAULTS). -#}
+{%- macro shell_icon(name) -%}
+{%- if name == 'home' -%}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="sidebar-icon">
+                        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+{%- elif name == 'hive' -%}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                        class="sidebar-icon">
+                        <polygon points="9.5,2.2 11.4,3.3 11.4,5.5 9.5,6.6 7.6,5.5 7.6,3.3" fill="#64748b" />
+                        <polygon points="14.5,2.2 16.4,3.3 16.4,5.5 14.5,6.6 12.6,5.5 12.6,3.3" fill="#64748b" />
+                        <polygon points="7,7.2 8.9,8.3 8.9,10.5 7,11.6 5.1,10.5 5.1,8.3" fill="#64748b" />
+                        <polygon points="12,7.2 13.9,8.3 13.9,10.5 12,11.6 10.1,10.5 10.1,8.3" fill="#0f172a" />
+                        <polygon points="17,7.2 18.9,8.3 18.9,10.5 17,11.6 15.1,10.5 15.1,8.3" fill="#64748b" />
+                        <polygon points="9.5,12.2 11.4,13.3 11.4,15.5 9.5,16.6 7.6,15.5 7.6,13.3" fill="#64748b" />
+                        <polygon points="14.5,12.2 16.4,13.3 16.4,15.5 14.5,16.6 12.6,15.5 12.6,13.3" fill="#64748b" />
+                        <polygon points="12,17.2 13.9,18.3 13.9,20.5 12,21.6 10.1,20.5 10.1,18.3" fill="#64748b" />
+                    </svg>
+{%- elif name == 'folder' -%}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="sidebar-icon">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg>
+{%- elif name == 'plus' -%}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="sidebar-icon">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+{%- elif name -%}
+                    <i class="{{ name }} sidebar-icon"></i>
+{%- endif -%}
+{%- endmacro -%}
+{%- set kit_css = url_for('nsoffice_ui.static', filename='css/') -%}
+{%- set kit_js = url_for('nsoffice_ui.static', filename='js/') -%}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ nsoffice.title }}{% endblock %}</title>
+
+    <!-- Bootstrap 5 & FontAwesome icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- NSOffice UI kit -->
+    <link rel="stylesheet" href="{{ kit_css }}tokens.css?v={{ nsoffice_version }}">
+    <link rel="stylesheet" href="{{ kit_css }}shell.css?v={{ nsoffice_version }}">
+    <link rel="stylesheet" href="{{ kit_css }}components.css?v={{ nsoffice_version }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-logo">
+                <a href="{{ nsoffice.brand.href }}"{% if nsoffice.brand.view %} data-view="{{ nsoffice.brand.view }}"{% endif %}>
+                    <img src="{{ url_for('nsoffice_ui.static', filename='img/nsoffice_logo.png') }}" alt="{{ nsoffice.brand.alt }}"
+                        class="brand-logo-img">
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                {% for item in nsoffice.nav %}
+                <a href="{{ item.href }}"{% if item.view %} data-view="{{ item.view }}"{% endif %}{% if item.id %} id="{{ item.id }}"{% endif %}
+                    class="nav-item-link {% if active_nav and active_nav == item.key %}active{% endif %}">
+                    {{ shell_icon(item.icon) }}
+                    <span>{{ item.label }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+
+            {% block sidebar_extra %}{% endblock %}
+
+            {% block recent_chats %}
+            <!-- Standard Recent Chats -->
+            <div class="recent-chats-header" id="recentChatsHeader"
+                style="display: {% if sidebar_admin_open %}none{% else %}flex{% endif %};">
+                <span>RECENT CHATS</span>
+                <i class="fa-solid fa-chevron-down" style="font-size: 0.75rem;"></i>
+            </div>
+            <div class="recent-chats-list" id="recentChatsList"
+                style="display: {% if sidebar_admin_open %}none{% else %}flex{% endif %};">
+                {% for chat in nsoffice.recent_chats %}
+                <a href="{{ chat.href|default('#') }}" class="recent-chat-item"><i class="{{ chat.icon }} me-2"></i> {{ chat.label }}</a>
+                {% endfor %}
+                <a href="#" class="show-all-chats-link">{{ nsoffice.all_chats_label }}</a>
+            </div>
+            {% endblock %}
+
+            <!-- User block + profile menu -->
+            <div class="sidebar-user">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                    class="user-profile-icon">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                </svg>
+                <div class="user-info-stack">
+                    <div class="user-name">{{ nsoffice.user.name }}</div>
+                    {% if nsoffice.user.role %}
+                    <span class="admin-badge"{% if nsoffice.user.role_href %} data-href="{{ nsoffice.user.role_href }}" data-view="{{ nsoffice.user.role_view }}" style="cursor: pointer;" title="Open Admin Panel"{% endif %}>{{ nsoffice.user.role }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="profile-popover-menu" id="profileMenuPopover">
+                    <div class="popover-user-header">
+                        <div class="popover-user-name">{{ nsoffice.user.full_name }}</div>
+                        <div class="popover-user-email">{{ nsoffice.user.email }}</div>
+                    </div>
+                    <a href="#" class="popover-item">
+                        <i class="fa-regular fa-user text-muted"></i> Account
+                    </a>
+                    {% if nsoffice.admin_settings %}
+                    <div class="popover-tooltip-wrap">
+                        <a href="{{ nsoffice.admin_settings.href }}"{% if nsoffice.admin_settings.view %} data-view="{{ nsoffice.admin_settings.view }}"{% endif %}
+                            class="popover-item">
+                            <i class="fa-shield-halved fa-solid text-primary"></i> Admin Settings
+                        </a>
+                        <div class="popover-tooltip-box">
+                            Set access, configure models, connect tools, and monitor activity across your organisation.
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% block profile_menu_extra %}{% endblock %}
+                    <a href="#" class="popover-item text-danger">
+                        <i class="fa-solid fa-right-from-bracket"></i> Sign out
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-content">
+
+            {% if not hide_top_bar %}
+            <header class="top-bar">
+                {% block top_bar_start %}{% endblock %}
+                {% block top_bar %}
+                <div class="top-pill">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                    </svg>
+                    <span>{{ nsoffice.credits }}</span>
+                </div>
+                {% endblock %}
+            </header>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block body_end %}{% endblock %}
+
+    <script src="{{ kit_js }}shell.js?v={{ nsoffice_version }}"></script>
+    <script src="{{ kit_js }}catalog.js?v={{ nsoffice_version }}"></script>
+    <script src="{{ kit_js }}composer.js?v={{ nsoffice_version }}"></script>
+</body>
+
+</html>

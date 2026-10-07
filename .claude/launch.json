@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "canva-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "kit-reference",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["C:\\Users\\dhana\\AuditBeeNSOffice\\nsoffice_ui\\example\\app.py"],
+      "port": 5055
+    }
+  ]
+}

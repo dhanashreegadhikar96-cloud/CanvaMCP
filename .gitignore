@@ -1,0 +1,45 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env and secret files
+.env*.local
+.env
+*backup_codes*
+
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# generated from nsoffice_ui/static by scripts/sync-nsoffice-ui.mjs
+/public/nsoffice-ui/
+
+# kit python cache
+__pycache__/
+
+# chat debug log (development only)
+.canva-debug.log
+
+# Canva MCP client registration (created by the app on first "Connect Canva editor")
+.canva-mcp-client.json

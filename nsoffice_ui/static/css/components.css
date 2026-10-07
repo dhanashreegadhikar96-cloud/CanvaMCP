@@ -1,0 +1,1287 @@
+/* ==========================================================================
+   NSOffice UI — components
+   Toast, hub cards (Hive), catalogue page (hero, search, filter pills,
+   sections, card grid) and the context banner. Colours come from tokens.css.
+   ========================================================================== */
+
+/* ---------- Toast ---------- */
+.toast-notification {
+    position: fixed;
+    top: 28px;
+    right: 28px;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-success);
+    border-radius: 16px;
+    padding: 1.25rem 1.75rem;
+    box-shadow: var(--ns-shadow-lg);
+    display: none;
+    align-items: center;
+    gap: 1.15rem;
+    z-index: 3000;
+    animation: slideIn 0.3s ease;
+}
+
+.toast-notification.active {
+    display: flex;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ---------- Hub cards (e.g. Hive: Bees / Connectors) ---------- */
+/* Production NSOffice: ~310×186 cards sized to their text, 52px icon tile, 20px title, 15px text */
+.hub-cards {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.6rem 1.5rem;
+}
+
+.hub-card {
+    min-width: 300px;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 14px;
+    padding: 1.75rem 2rem 2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--ns-shadow-card);
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+}
+
+.hub-card:hover {
+    border-color: var(--ns-primary);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.10);
+    transform: translateY(-2px);
+}
+
+.hub-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    margin-bottom: 0.9rem;
+}
+
+.hub-card-icon--purple {
+    background-color: #f3e8ff;
+    color: var(--ns-accent-purple);
+}
+
+.hub-card-icon--blue {
+    background-color: #e0f2fe;
+    color: var(--ns-accent-blue);
+}
+
+.hub-card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--ns-text);
+    margin-bottom: 0.5rem;
+}
+
+.hub-card-desc {
+    font-size: 0.875rem;
+    color: var(--ns-text-muted);
+    line-height: 1.45;
+}
+
+/* ---------- Catalogue page (e.g. /hive/bees, /hive/connectors) ---------- */
+
+/* The page header stays pinned while the catalogue scrolls */
+.catalog-page .view-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: var(--ns-bg);
+    padding-top: 1.25rem;
+    padding-bottom: 0.75rem;
+}
+
+.catalog-page .view-header-title {
+    font-size: 1.75rem;
+    font-weight: 500;
+    letter-spacing: -0.4px;
+}
+
+.catalog {
+    padding: 0 1.5rem 3rem; /* production: content starts 24px from the sidebar, right under the header */
+    width: 100%;
+}
+
+/* Hero */
+.catalog-hero {
+    background: linear-gradient(135deg, #edf1fe 0%, #f4f3ff 100%);
+    border: 1px solid var(--ns-primary-tint);
+    border-radius: 16px;
+    padding: 2.5rem 2.5rem;
+    min-height: 240px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.catalog-hero-content {
+    max-width: 580px;
+}
+
+.catalog-hero-heading {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--ns-text);
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+    letter-spacing: -0.4px;
+}
+
+.catalog-hero-accent {
+    color: var(--ns-primary);
+    display: block;
+}
+
+.catalog-hero-subtext {
+    font-size: 0.9375rem;
+    color: var(--ns-text-secondary);
+    line-height: 1.6;
+    margin-top: 0.5rem;
+}
+
+.catalog-hero-visual {
+    width: 240px;
+    height: 170px;
+    object-fit: contain;
+    border-radius: 0;
+    box-shadow: none;
+    mix-blend-mode: multiply;
+    flex-shrink: 0;
+}
+
+/* Search */
+.catalog-search {
+    position: relative;
+    margin-bottom: 1.25rem;
+    width: 100%;
+}
+
+.catalog-search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ns-text-faint);
+    font-size: 0.95rem;
+}
+
+.catalog-search-input {
+    width: 100%;
+    padding: 0.65rem 1rem 0.65rem 2.6rem;
+    border-radius: 10px;
+    border: 1px solid var(--ns-border);
+    background-color: var(--ns-surface);
+    font-size: 0.9375rem;
+    color: var(--ns-text);
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+}
+
+.catalog-search-input:focus {
+    outline: none;
+    border-color: var(--ns-primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+/* Filter pills */
+.catalog-pills {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.catalog-pill {
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    color: var(--ns-text-secondary);
+    padding: 0.4rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.84375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.catalog-pill:hover {
+    background-color: var(--ns-hover-soft);
+    color: var(--ns-text);
+}
+
+.catalog-pill.active {
+    background-color: var(--ns-primary);
+    color: var(--ns-text-on-primary);
+    border-color: var(--ns-primary);
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+}
+
+/* Sections ("Team Bees") and groups ("Sales & Marketing") */
+.catalog-section {
+    margin-bottom: 3rem;
+}
+
+.catalog-section-title,
+.catalog-group-title {
+    font-size: 1.3rem;
+    font-weight: 500;
+    color: var(--ns-text);
+    margin-bottom: 0.25rem;
+}
+
+.catalog-group-title {
+    margin-bottom: 1rem;
+}
+
+.catalog-group + .catalog-group {
+    margin-top: 2.25rem;
+}
+
+.catalog-group.is-empty,
+.catalog-section.is-empty {
+    display: none;
+}
+
+/* Card grid: fixed-width cards that don't stretch when a group has only a few */
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 200px));
+    gap: 1rem;
+}
+
+.catalog-card {
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 12px;
+    padding: 1.5rem 1.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+.catalog-card:hover {
+    border-color: var(--ns-primary-ring);
+    transform: translateY(-2px);
+}
+
+.catalog-card-icon {
+    font-size: 1.25rem;
+    color: var(--ns-text);
+    margin-bottom: 1.25rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.catalog-card-icon svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 1.6;
+}
+
+.catalog-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ns-text);
+    margin-bottom: 0.9rem;
+    line-height: 1.6;
+}
+
+.catalog-card-desc {
+    font-size: 0.8125rem;
+    color: var(--ns-text-muted);
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+    flex: 1;
+}
+
+.catalog-card-btn {
+    background-color: var(--ns-primary);
+    color: var(--ns-text-on-primary);
+    border: none;
+    width: 100%;
+    padding: 0.45rem 0;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    box-shadow: none;
+}
+
+.catalog-card-btn:hover {
+    background-color: var(--ns-primary-hover);
+}
+
+/* ---------- Context banner (bottom of a catalogue) ---------- */
+.context-banner {
+    background-color: var(--ns-surface-muted);
+    border: 1px solid var(--ns-border);
+    border-radius: 16px;
+    padding: 1.5rem 2rem;
+    margin-top: 2.5rem;
+    display: grid;
+    grid-template-columns: 140px repeat(3, 1fr);
+    gap: 2rem;
+    align-items: center;
+}
+
+.context-banner-visual {
+    width: 110px;
+    height: 75px;
+    background: linear-gradient(135deg, #c084fc 0%, #818cf8 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(129, 140, 248, 0.25);
+    color: var(--ns-text-on-primary);
+    font-size: 2rem;
+}
+
+.context-banner-col {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.context-banner-col-center {
+    align-items: center;
+}
+
+.context-banner-icon {
+    font-size: 1.1rem;
+    color: var(--ns-primary);
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    width: 18px;
+    height: 18px;
+}
+
+.context-banner-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ns-text);
+    margin-bottom: 0.25rem;
+}
+
+.context-banner-text {
+    font-size: 0.875rem;
+    color: var(--ns-text-muted);
+    line-height: 1.6;
+}
+
+.context-banner-accent {
+    color: var(--ns-primary);
+}
+
+@media (max-width: 900px) {
+    .catalog-hero {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 1.5rem;
+    }
+
+    .catalog-hero-heading {
+        font-size: 1.6rem;
+    }
+
+    .catalog-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+
+    .context-banner {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ---------- Icon tiles (connector cards, composer chips) ---------- */
+/* <span class="ns-tile ns-tile--blue"><i data-lucide="mail"></i></span> */
+.ns-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 8px;
+    background-color: var(--ns-tile-slate-bg);
+    color: var(--ns-tile-slate);
+}
+
+.ns-tile--purple { background-color: var(--ns-tile-purple-bg); color: var(--ns-tile-purple); }
+.ns-tile--indigo { background-color: var(--ns-tile-indigo-bg); color: var(--ns-tile-indigo); }
+.ns-tile--blue { background-color: var(--ns-tile-blue-bg); color: var(--ns-tile-blue); }
+.ns-tile--teal { background-color: var(--ns-tile-teal-bg); color: var(--ns-tile-teal); }
+.ns-tile--green { background-color: var(--ns-tile-green-bg); color: var(--ns-tile-green); }
+.ns-tile--red { background-color: var(--ns-tile-red-bg); color: var(--ns-tile-red); }
+.ns-tile--amber { background-color: var(--ns-tile-amber-bg); color: var(--ns-tile-amber); }
+.ns-tile--slate { background-color: var(--ns-tile-slate-bg); color: var(--ns-tile-slate); }
+
+/* Catalogue card whose item has a colour (e.g. Hive > Connectors) */
+.catalog-card-icon.ns-tile {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.catalog-card-icon.ns-tile svg {
+    width: 22px;
+    height: 22px;
+    stroke-width: 1.75;
+}
+
+/* ---------- Composer (home: heading, prompt cards, ask bar with tools menu) ---------- */
+.composer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0 1.5rem;
+}
+
+.composer-welcome {
+    margin: auto;
+    width: 100%;
+    max-width: 980px;
+    text-align: center;
+}
+
+/* Sizes follow production NSOffice (india.nsoffice.ai) at 1536px: 40px semibold heading,
+   2×2 cards of 338×90 with 20px gaps (696px grid), ask bar 752×54. */
+.composer-heading {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--ns-text);
+    letter-spacing: -0.6px;
+    line-height: 1.2;
+    margin: 0 0 2rem;
+}
+
+.composer-prompts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    max-width: 696px;
+    margin: 0 auto;
+}
+
+.composer-prompt {
+    text-align: left;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 12px;
+    box-shadow: var(--ns-shadow-card);
+    padding: 1.15rem 1.1rem;
+    min-height: 90px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.composer-prompt:hover {
+    transform: translateY(-4px);
+    border-color: var(--ns-primary-ring);
+    box-shadow: var(--ns-shadow-lg);
+}
+
+.composer-prompt-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--ns-text);
+    line-height: 1.35;
+    margin-bottom: 0.3rem;
+}
+
+.composer-prompt-desc {
+    font-size: 0.9rem;
+    color: var(--ns-text-muted);
+    line-height: 1.45;
+}
+
+.composer-bar-area {
+    flex-shrink: 0;
+    padding: 0.5rem 0 1rem;
+}
+
+.composer-bar {
+    position: relative;
+    max-width: 752px;
+    margin: 0 auto;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 16px;
+    padding: 0.4rem 0.5rem 0.4rem 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 54px;
+    box-shadow: var(--ns-shadow-sm);
+}
+
+.composer-bee {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border-radius: 50%;
+    transition: background-color 0.15s ease;
+}
+
+.composer-bee svg {
+    width: 26px;
+    height: 26px;
+}
+
+.composer-bee:hover,
+.composer-bee[aria-expanded="true"] {
+    background-color: var(--ns-hover);
+}
+
+/* Tools menu (opens above the bar from the bee button) */
+.composer-menu {
+    position: absolute;
+    bottom: calc(100% + 0.75rem);
+    left: 0.75rem;
+    width: 190px;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 12px;
+    box-shadow: var(--ns-shadow-popover);
+    display: none;
+    flex-direction: column;
+    z-index: 1500;
+}
+
+.composer-menu.active {
+    display: flex;
+}
+
+.composer-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-left: 3px solid transparent;
+    background: transparent;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ns-text);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+}
+
+.composer-menu-item + .composer-menu-item {
+    border-top: 1px solid var(--ns-divider-soft);
+}
+
+.composer-menu-item:first-child { border-top-left-radius: 11px; border-top-right-radius: 11px; }
+.composer-menu-item:last-child { border-bottom-left-radius: 11px; border-bottom-right-radius: 11px; }
+
+.composer-menu-item > span {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.composer-menu-item svg {
+    width: 18px;
+    height: 18px;
+}
+
+.composer-menu-chevron {
+    color: var(--ns-text-faint);
+    font-size: 0.7rem;
+}
+
+.composer-menu-item:hover {
+    background-color: var(--ns-hover-soft);
+}
+
+.composer-menu-item.active {
+    border-left-color: var(--ns-primary);
+    background-color: var(--ns-menu-highlight-bg);
+    color: var(--ns-primary);
+    font-weight: 600;
+}
+
+/* Flyout to the right of the menu (e.g. the connector chips) */
+.composer-flyout {
+    position: absolute;
+    left: calc(100% + 0.5rem);
+    bottom: 0;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 12px;
+    box-shadow: var(--ns-shadow-popover);
+    padding: 0.6rem;
+    display: none;
+    grid-template-columns: repeat(5, max-content);
+    gap: 0.4rem;
+}
+
+.composer-flyout.active {
+    display: grid;
+}
+
+.composer-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.75rem 0.5rem 0.55rem;
+    min-width: 115px;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ns-text);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.composer-chip:hover {
+    border-color: var(--ns-primary-ring);
+    background-color: var(--ns-hover-soft);
+}
+
+.composer-chip .ns-tile {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+}
+
+.composer-chip .ns-tile svg {
+    width: 15px;
+    height: 15px;
+    stroke-width: 1.9;
+}
+
+.composer-input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--ns-text);
+    font-size: 1.0625rem;
+}
+
+.composer-input::placeholder {
+    color: var(--ns-text-faint);
+}
+
+.composer-icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--ns-text-muted);
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.composer-icon-btn:hover {
+    color: var(--ns-text);
+    background-color: var(--ns-hover);
+}
+
+.composer-send {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: none;
+    background-color: var(--ns-send);
+    color: var(--ns-text-on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.composer-send:hover {
+    background-color: var(--ns-send-hover);
+}
+
+.composer-disclaimer {
+    margin-top: 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    color: var(--ns-text-muted);
+    white-space: nowrap;
+}
+
+.composer-disclaimer-brand {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 800;
+    color: var(--ns-text-strong);
+    letter-spacing: -0.2px;
+}
+
+.composer-send:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.composer-send--stop {
+    background-color: var(--ns-text-strong);
+}
+
+.composer-send--stop:hover {
+    background-color: var(--ns-text);
+}
+
+/* ---------- Chat (thread + ask bar on a page) ---------- */
+/* <section class="page-view chat-page active-view"> page header, .chat-thread, .chat-bar-area */
+.page-view.chat-page {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.chat-thread {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+}
+
+.chat-thread-inner {
+    width: 100%;
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.chat-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.chat-row--user {
+    justify-content: flex-end;
+}
+
+.chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--ns-primary-ring), var(--ns-accent-purple));
+    color: var(--ns-text-on-primary);
+}
+
+.chat-avatar svg {
+    width: 18px;
+    height: 18px;
+}
+
+.chat-bubble {
+    font-size: 0.97rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.chat-bubble--user {
+    max-width: 78%;
+    background: linear-gradient(135deg, var(--ns-primary) 0%, var(--ns-primary-hover) 100%);
+    color: var(--ns-text-on-primary);
+    border-radius: 22px 22px 4px 22px;
+    padding: 0.8rem 1.3rem;
+    box-shadow: var(--ns-shadow-md);
+    white-space: pre-wrap;
+}
+
+.chat-bubble--assistant {
+    flex: 1;
+    min-width: 0;
+    max-width: 85%;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    color: var(--ns-text-strong);
+    border-radius: 22px 22px 22px 4px;
+    padding: 1rem 1.4rem;
+    box-shadow: var(--ns-shadow-card);
+}
+
+.chat-bubble p {
+    margin: 0 0 0.6rem;
+}
+
+.chat-bubble ul {
+    margin: 0 0 0.6rem;
+    padding-left: 1.25rem;
+}
+
+.chat-bubble > :last-child,
+.chat-bubble-text > :last-child {
+    margin-bottom: 0;
+}
+
+.chat-bubble a {
+    color: var(--ns-primary);
+    font-weight: 500;
+}
+
+.chat-error {
+    color: var(--ns-tile-red);
+}
+
+/* A tool step inside an assistant bubble ("Searching designs") */
+.chat-step {
+    border: 1px solid var(--ns-border);
+    background-color: var(--ns-hover-soft);
+    border-radius: 10px;
+    margin: 0 0 0.75rem;
+    font-size: 0.875rem;
+}
+
+.chat-step-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: var(--ns-text-secondary);
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+}
+
+.chat-step-status {
+    display: inline-flex;
+    font-size: 0.85rem;
+}
+
+.chat-step--done .chat-step-status { color: var(--ns-success); }
+.chat-step--error .chat-step-status { color: var(--ns-tile-red); }
+.chat-step--running .chat-step-status { color: var(--ns-primary); animation: chat-spin 1s linear infinite; }
+
+.chat-step-toggle {
+    margin-left: auto;
+    color: var(--ns-text-faint);
+    font-size: 0.75rem;
+}
+
+.chat-step-body {
+    border-top: 1px solid var(--ns-border);
+    padding: 0.5rem 0.75rem 0.65rem;
+}
+
+.chat-step-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ns-text-muted);
+    margin: 0.25rem 0;
+}
+
+.chat-step-body pre {
+    margin: 0 0 0.35rem;
+    max-height: 220px;
+    overflow: auto;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 6px;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.78rem;
+    color: var(--ns-text-body);
+    white-space: pre-wrap;
+}
+
+/* "Working" dots */
+.chat-typing {
+    display: inline-flex;
+    gap: 4px;
+    padding: 0.35rem 0;
+}
+
+.chat-typing span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--ns-primary-ring);
+    animation: chat-bounce 1.2s infinite ease-in-out;
+}
+
+.chat-typing span:nth-child(2) { animation-delay: 0.15s; }
+.chat-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes chat-bounce {
+    0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+    40% { opacity: 1; transform: translateY(-3px); }
+}
+
+@keyframes chat-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Empty state: what to ask */
+.chat-empty {
+    margin: auto;
+    width: 100%;
+    max-width: 880px;
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.chat-empty-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    margin: 0 auto 1rem;
+}
+
+.chat-empty-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+.chat-empty-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--ns-text);
+    letter-spacing: -0.5px;
+    margin-bottom: 0.35rem;
+}
+
+.chat-empty-text {
+    color: var(--ns-text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.chat-bar-area {
+    flex-shrink: 0;
+    padding: 0.5rem 1.5rem 1rem;
+}
+
+/* Same width as NSOffice's assistant ask bar */
+.chat-bar-area .composer-bar {
+    max-width: 752px;
+}
+
+/* Small status button in a page header ("Connected") */
+.view-header-pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.85rem;
+    border-radius: 9999px;
+    border: 1px solid var(--ns-border);
+    background-color: var(--ns-surface);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ns-text-secondary);
+    cursor: pointer;
+}
+
+.view-header-pill::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--ns-text-faint);
+}
+
+.view-header-pill--ok::before {
+    background-color: var(--ns-success);
+}
+
+/* ---------- Assistant page (a connector's chat, e.g. "Outlook Assistant") ---------- */
+/* Title chip at the left of the top bar, level with the NU credit pill */
+.top-bar-start {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Production: ~30px tall chip with 16px semibold label */
+.assistant-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* Empty state: big centred question + 2×2 suggestion cards (uses .composer-prompt cards).
+   Production: ~38px semibold heading over a ~624px card grid. */
+.assistant-welcome {
+    margin: auto;
+    width: 100%;
+    max-width: 696px;
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.assistant-heading {
+    font-size: 2.4rem;
+    font-weight: 600;
+    color: var(--ns-text);
+    letter-spacing: -0.6px;
+    line-height: 1.2;
+    margin: 0 0 2rem;
+}
+
+.assistant-welcome .composer-prompts {
+    max-width: 624px;
+}
+
+/* NS◐Office.AI wordmark in the disclaimer under an ask bar */
+.ns-logo-inline {
+    display: inline-flex;
+    align-items: center;
+    font-weight: 800;
+    font-size: 0.875rem;
+    color: var(--ns-text-strong);
+    letter-spacing: -0.2px;
+}
+
+.ns-logo-inline svg {
+    margin: 0 1px 0 2px;
+    vertical-align: -2px;
+}
+
+/* ---------- Connect Apps dialog (sign in to a connector before using it) ---------- */
+/* Covers the main workspace only (the sidebar stays usable), like NSOffice's assistants. */
+.ns-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 2000;
+    background-color: var(--ns-overlay);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.ns-modal {
+    width: 100%;
+    max-width: 500px;
+    background-color: var(--ns-surface);
+    border-radius: 16px;
+    box-shadow: var(--ns-shadow-lg);
+    padding: 1.75rem 1.9rem 1.9rem;
+}
+
+.ns-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.4rem;
+}
+
+.ns-modal-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--ns-text);
+}
+
+.ns-modal-close {
+    border: none;
+    background: transparent;
+    color: var(--ns-text-muted);
+    font-size: 1.25rem;
+    padding: 0.25rem 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.ns-modal-close:hover {
+    background-color: var(--ns-hover);
+    color: var(--ns-text);
+}
+
+.ns-modal-error {
+    margin: -0.5rem 0 1rem;
+    font-size: 0.875rem;
+    color: var(--ns-alert);
+}
+
+.connect-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.5rem;
+    background-color: var(--ns-surface-muted);
+    border: 1px solid var(--ns-border);
+    border-radius: 12px;
+}
+
+.connect-row-icon {
+    font-size: 1.35rem;
+    color: var(--ns-text);
+    width: 28px;
+    display: flex;
+    justify-content: center;
+}
+
+.connect-row-name {
+    flex: 1;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--ns-text);
+}
+
+.connect-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.connect-row-detail {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: var(--ns-text-muted);
+}
+
+.connect-disconnect {
+    margin-top: 1rem;
+    text-align: right;
+}
+
+.connect-disconnect button {
+    border: none;
+    background: transparent;
+    color: var(--ns-text-muted);
+    font-size: 0.875rem;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.connect-disconnect button:hover {
+    color: var(--ns-text);
+}
+
+.connect-row-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ns-success);
+}
+
+.view-header-pill + .view-header-pill {
+    margin-left: 0.5rem;
+}
+
+.view-header-pill--plain::before {
+    display: none;
+}
+
+.connect-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1.4rem;
+    line-height: 1.25;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--ns-connect);
+    color: var(--ns-text-on-primary);
+    font-size: 1rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.connect-btn:hover {
+    background-color: var(--ns-connect-hover);
+    color: var(--ns-text-on-primary);
+}
+
+/* Ask bar button that opens the dialog: a plug with a red dot while not connected */
+.composer-connect {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--ns-tile-red-bg);
+    color: var(--ns-tile-red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.composer-connect::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    right: 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--ns-alert);
+}
+
+.composer-connect--ok {
+    background-color: var(--ns-tile-green-bg);
+    color: var(--ns-tile-green);
+}
+
+.composer-connect--ok::after {
+    display: none;
+}

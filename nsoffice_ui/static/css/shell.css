@@ -1,0 +1,473 @@
+/* ==========================================================================
+   NSOffice UI — shell
+   Page base, app layout, sidebar (brand, nav, recent chats, user + profile menu,
+   admin section), top bar with the NU credit pill, page views and page header.
+   Colours come from tokens.css.
+   ========================================================================== */
+
+/* Base page */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: var(--ns-font);
+    background-color: var(--ns-bg);
+    color: var(--ns-text);
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    font-size: 0.9375rem; /* 15px */
+    line-height: 1.5;
+}
+
+/* App Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+}
+
+/* Sidebar */
+/* Sidebar sizes follow production NSOffice (india.nsoffice.ai): 16px nav items in 30px rows
+   36px apart, items running almost edge to edge, logo ~210px wide with no rule under it. */
+.sidebar {
+    width: var(--ns-sidebar-width);
+    background-color: var(--ns-surface);
+    border-right: 1px solid var(--ns-sidebar-border);
+    display: flex;
+    flex-direction: column;
+    padding: 1.4rem 0.25rem 1rem;
+    flex-shrink: 0;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    padding: 0 1.1rem;
+    margin-bottom: 1.6rem;
+}
+
+.brand-logo-img {
+    height: 36px;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--ns-divider);
+    margin-bottom: 0.9rem;
+}
+
+.nav-item-link {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.3125rem 0.8rem;
+    color: var(--ns-text-strong);
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 1rem; /* 16px */
+    line-height: 1.25;
+    font-weight: 400;
+    transition: all 0.15s ease;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.nav-item-link i,
+.sidebar-icon {
+    font-size: 1.1rem;
+    width: 18px;
+    height: 18px;
+    color: var(--ns-text-secondary);
+    flex-shrink: 0;
+}
+
+.nav-item-link:hover {
+    background-color: var(--ns-hover);
+    color: var(--ns-text);
+}
+
+.nav-item-link.active {
+    background-color: var(--ns-hover);
+    color: var(--ns-text);
+    font-weight: 500;
+}
+
+.recent-chats-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.78rem; /* 12.5px */
+    font-weight: 600;
+    color: var(--ns-text-muted);
+    letter-spacing: 0.06em;
+    padding: 0 0.75rem 0 0.8rem;
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+}
+
+.recent-chats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.recent-chat-item {
+    padding: 0.4rem 0.8rem;
+    color: var(--ns-text-strong);
+    font-size: 0.875rem; /* 14px */
+    font-weight: 400;
+    text-decoration: none;
+    border-radius: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.recent-chat-item i {
+    font-size: 0.9rem;
+    color: var(--ns-text-muted);
+}
+
+.recent-chat-item:hover {
+    background-color: var(--ns-hover-soft);
+    color: var(--ns-text);
+}
+
+.show-all-chats-link {
+    color: var(--ns-text-muted);
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0.4rem 0.6rem;
+    margin-top: 0.35rem;
+    display: block;
+}
+
+.show-all-chats-link:hover {
+    color: var(--ns-text);
+}
+
+.sidebar-user {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ns-divider);
+}
+
+.user-profile-icon {
+    font-size: 1.4rem;
+    color: var(--ns-text-muted);
+    margin-right: 0.75rem;
+    margin-left: 0.25rem;
+}
+
+.user-info-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.user-name {
+    font-size: 0.875rem; /* 14px */
+    font-weight: 600;
+    color: var(--ns-text);
+    line-height: 1.2;
+    margin-bottom: 2px;
+}
+
+.admin-badge {
+    background-color: var(--ns-badge-bg);
+    color: var(--ns-badge-text);
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    position: relative;
+    background-color: var(--ns-bg);
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Top Bar */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 1rem 2rem 0.5rem 1.25rem; /* production: title chip 20px from the sidebar */
+    gap: 1rem;
+}
+
+.top-pill {
+    background-color: var(--ns-credit-bg);
+    border: none;
+    padding: 0.35rem 0.7rem;
+    border-radius: 9999px;
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    color: var(--ns-credit-text);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    box-shadow: none;
+}
+
+.top-pill i,
+.top-pill svg {
+    color: var(--ns-credit-text);
+    font-size: 0.875rem;
+}
+
+/* Sidebar Tooltip for Hive */
+.nav-tooltip-wrap {
+    position: relative;
+    display: flex;
+    width: 100%;
+}
+
+.nav-tooltip-wrap:hover .nav-tooltip-box {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+.nav-tooltip-box {
+    position: absolute;
+    left: 105%;
+    top: 50%;
+    transform: translateY(-50%) translateX(-8px);
+    background-color: var(--ns-tooltip-bg);
+    color: var(--ns-tooltip-text);
+    font-size: 0.88rem;
+    font-weight: 500;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    white-space: nowrap;
+    box-shadow: var(--ns-shadow-tooltip);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 2500;
+}
+
+.nav-tooltip-box::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 6px 5px 0;
+    border-style: solid;
+    border-color: transparent var(--ns-tooltip-bg) transparent transparent;
+}
+
+/* Multi-view Container Rules */
+.page-view {
+    display: none;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.page-view.active-view {
+    display: flex;
+    flex-direction: column;
+}
+
+/* View Top Header (Back Navigation) */
+.view-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.75rem 0.25rem 1.75rem;
+}
+
+.back-btn {
+    background: transparent;
+    border: none;
+    color: var(--ns-text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+    border-radius: 6px;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.back-btn:hover {
+    background-color: var(--ns-hover-strong);
+    color: var(--ns-text);
+}
+
+.view-header-title {
+    font-size: 1.25rem; /* 20px */
+    font-weight: 700;
+    color: var(--ns-text);
+    letter-spacing: -0.3px;
+}
+
+/* User Profile Popover Menu (Images 15 & 18) */
+.sidebar-user {
+    position: relative;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 0.65rem 0.5rem;
+    transition: background-color 0.15s ease;
+}
+
+.sidebar-user:hover {
+    background-color: var(--ns-hover-soft);
+}
+
+.profile-popover-menu {
+    position: absolute;
+    bottom: 115%;
+    left: 0;
+    width: 260px;
+    background-color: var(--ns-surface);
+    border: 1px solid var(--ns-border);
+    border-radius: 18px;
+    padding: 0.75rem 0.6rem;
+    box-shadow: var(--ns-shadow-popover);
+    display: none;
+    flex-direction: column;
+    z-index: 2500;
+}
+
+.profile-popover-menu.active {
+    display: flex;
+}
+
+.popover-user-header {
+    padding: 0.6rem 0.85rem 0.85rem 0.85rem;
+    border-bottom: 1px solid var(--ns-divider-soft);
+    margin-bottom: 0.4rem;
+}
+
+.popover-user-name {
+    font-weight: 700;
+    font-size: 1.08rem;
+    color: var(--ns-text);
+    line-height: 1.2;
+}
+
+.popover-user-email {
+    font-size: 0.84rem;
+    color: var(--ns-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.popover-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.7rem 0.85rem;
+    color: var(--ns-text-strong);
+    font-size: 1.02rem;
+    font-weight: 500;
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+    position: relative;
+}
+
+.popover-item:hover {
+    background-color: var(--ns-hover);
+    color: var(--ns-text);
+}
+
+.popover-tooltip-wrap {
+    position: relative;
+    display: flex;
+    width: 100%;
+}
+
+.popover-tooltip-wrap:hover .popover-tooltip-box {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+}
+
+.popover-tooltip-box {
+    position: absolute;
+    left: 106%;
+    top: 50%;
+    transform: translateY(-50%) translateX(-8px);
+    background-color: var(--ns-tooltip-bg);
+    color: var(--ns-tooltip-text);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.65rem 1rem;
+    border-radius: 10px;
+    width: 250px;
+    white-space: normal;
+    line-height: 1.4;
+    box-shadow: var(--ns-shadow-tooltip);
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 3000;
+}
+
+.popover-tooltip-box::before {
+    content: '';
+    position: absolute;
+    left: -5px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 5px 6px 5px 0;
+    border-style: solid;
+    border-color: transparent var(--ns-tooltip-bg) transparent transparent;
+}
+
+/* Sidebar Admin Navigation Section */
+.sidebar-admin-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--ns-divider);
+}
+
+.sidebar-admin-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ns-text-muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    padding: 0 0.5rem;
+}

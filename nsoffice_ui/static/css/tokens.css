@@ -1,0 +1,110 @@
+/* ==========================================================================
+   NSOffice UI — design tokens
+   Every colour, font, radius and shadow the shell and components use.
+   Re-theme an app by overriding these in its own :root after this file.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+    /* Typography */
+    --ns-font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+    /* Brand */
+    --ns-primary: #4f46e5;          /* buttons, active pills, accents */
+    --ns-primary-hover: #4338ca;
+    --ns-primary-ring: #6366f1;     /* hover borders */
+    --ns-primary-tint: #e0e7ff;
+    --ns-accent-purple: #a855f7;
+    --ns-accent-blue: #0284c7;
+
+    /* Surfaces */
+    --ns-bg: #f8fafc;               /* page background */
+    --ns-surface: #ffffff;          /* cards, sidebar, popovers */
+    --ns-surface-muted: #f1f5f9;    /* banners */
+    --ns-hover: #f1f5f9;            /* nav / menu item hover + active */
+    --ns-hover-soft: #f8fafc;
+    --ns-hover-strong: #e2e8f0;
+
+    /* Lines */
+    --ns-border: #e2e8f0;
+    --ns-divider: #eaedf0;          /* sidebar section dividers */
+    --ns-divider-soft: #f1f5f9;
+    --ns-sidebar-border: #e9ecef;
+
+    /* Text */
+    --ns-text: #0f172a;             /* headings, primary text */
+    --ns-text-strong: #1e293b;      /* nav items */
+    --ns-text-body: #334155;
+    --ns-text-secondary: #475569;
+    --ns-text-muted: #64748b;
+    --ns-text-faint: #94a3b8;
+    --ns-text-on-primary: #ffffff;
+
+    /* Shell specifics */
+    --ns-credit-bg: #ede9fe;        /* NU credit pill */
+    --ns-credit-text: #6d28d9;
+    --ns-badge-bg: #fef3c7;         /* role badge ("Admin") */
+    --ns-badge-text: #92400e;
+    --ns-tooltip-bg: #1e293b;
+    --ns-tooltip-text: #ffffff;
+    --ns-success: #10b981;
+
+    /* Icon tiles (connector cards, composer chips): soft background + icon colour */
+    --ns-tile-purple-bg: #ede9fe;
+    --ns-tile-purple: #7c3aed;
+    --ns-tile-indigo-bg: #e0e7ff;
+    --ns-tile-indigo: #4f46e5;
+    --ns-tile-blue-bg: #e0f2fe;
+    --ns-tile-blue: #0284c7;
+    --ns-tile-teal-bg: #ccfbf1;
+    --ns-tile-teal: #0d9488;
+    --ns-tile-green-bg: #dcfce7;
+    --ns-tile-green: #16a34a;
+    --ns-tile-red-bg: #fee2e2;
+    --ns-tile-red: #dc2626;
+    --ns-tile-amber-bg: #fef3c7;
+    --ns-tile-amber: #d97706;
+    --ns-tile-slate-bg: #f1f5f9;
+    --ns-tile-slate: #475569;
+
+    /* Connect Apps dialog */
+    --ns-overlay: rgba(15, 23, 42, 0.45);
+    --ns-connect: #3b82f6;
+    --ns-connect-hover: #2563eb;
+    --ns-alert: #ef4444;
+
+    /* Composer (home ask bar) */
+    --ns-send: #818cf8;
+    --ns-send-hover: #6366f1;
+    --ns-menu-highlight-bg: #eff6ff;
+
+    /* Shadows */
+    --ns-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+    --ns-shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+    --ns-shadow-lg: 0 12px 30px rgba(15, 23, 42, 0.12);
+    --ns-shadow-popover: 0 12px 32px rgba(15, 23, 42, 0.14);
+    --ns-shadow-tooltip: 0 10px 25px rgba(0, 0, 0, 0.2);
+    --ns-shadow-card: 0 2px 8px rgba(15, 23, 42, 0.03);
+
+    /* Layout */
+    --ns-sidebar-width: 256px;      /* production NSOffice (india.nsoffice.ai) */
+
+    /* Legacy names used by existing app stylesheets (keep in sync with the tokens above) */
+    --bg-main: var(--ns-bg);
+    --sidebar-bg: var(--ns-surface);
+    --card-bg: var(--ns-surface);
+    --card-border: var(--ns-border);
+    --primary-blue: #2563eb;
+    --accent-cyan: #00a3e0;
+    --accent-indigo: #6366f1;
+    --accent-emerald: #10b981;
+    --accent-purple: #8b5cf6;
+    --text-dark: var(--ns-text);
+    --text-muted: var(--ns-text-muted);
+    --text-light: var(--ns-text-faint);
+    --input-bg: var(--ns-surface);
+    --shadow-sm: var(--ns-shadow-sm);
+    --shadow-md: var(--ns-shadow-md);
+    --shadow-lg: var(--ns-shadow-lg);
+}

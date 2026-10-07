@@ -1,0 +1,19 @@
+{% extends "nsoffice/base.html" %}
+{% from "nsoffice/macros.html" import page_header, item_icon %}
+{% set active_nav = 'hive' %}
+
+{% block content %}
+<section class="page-view catalog-page active-view">
+    {{ page_header(connector.title, back_href='/hive/connectors') }}
+    <div class="catalog">
+        <div class="catalog-hero">
+            <div class="catalog-hero-content">
+                <h1 class="catalog-hero-heading">{{ connector.title }} <span class="catalog-hero-accent">Not connected</span></h1>
+                <p class="catalog-hero-subtext">{{ connector.desc }}</p>
+            </div>
+            <div class="catalog-card-icon" style="width:64px;height:64px;">{{ item_icon(connector.icon) }}</div>
+        </div>
+        <button type="button" class="catalog-card-btn" style="width:auto;padding:0.6rem 1.5rem;">Connect {{ connector.title }}</button>
+    </div>
+</section>
+{% endblock %}

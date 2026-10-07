@@ -1,0 +1,10 @@
+{% extends "nsoffice/base.html" %}
+{% from "nsoffice/macros.html" import page_header %}
+{% set active_nav = 'home' %}
+
+{% block content %}
+<section class="page-view active-view">
+    {{ page_header('Home') }}
+    <div class="catalog"><p class="catalog-hero-subtext">Your app's home page goes here.</p></div>
+</section>
+{% endblock %}
