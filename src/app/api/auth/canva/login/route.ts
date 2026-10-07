@@ -7,10 +7,10 @@ import { AUTHORIZE_URL, SCOPES, VERIFIER_COOKIE, appOrigin, credentials, redirec
 const base64Url = (buffer: Buffer) => buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
 export async function GET(request: Request) {
-  // The verifier cookie must be set on the same host Canva sends the user back to (127.0.0.1 locally).
-  // The Host header is what the browser actually used; request.url says localhost in dev either way.
-  const host = request.headers.get("host");
-  const origin = appOrigin();
+  const origin = appOrigin(request);
+  // Locally the app must run on 127.0.0.1 (Canva rejects localhost redirect URLs). If the browser used
+  // localhost, restart sign-in on 127.0.0.1 so the verifier cookie is on the host Canva returns to.
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
   if (host && host !== new URL(origin).host) {
     return NextResponse.redirect(`${origin}/api/auth/canva/login`);
   }
@@ -29,13 +29,13 @@ export async function GET(request: Request) {
   url.searchParams.set("scope", SCOPES.join(" "));
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", credentials()!.clientId);
-  url.searchParams.set("redirect_uri", redirectUri());
+  url.searchParams.set("redirect_uri", redirectUri(request));
   url.searchParams.set("state", state);
 
   const response = NextResponse.redirect(url.toString());
   response.cookies.set(VERIFIER_COOKIE, `${state}.${verifier}`, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: origin.startsWith("https://"),
     sameSite: "lax",
     maxAge: 10 * 60,
     path: "/",

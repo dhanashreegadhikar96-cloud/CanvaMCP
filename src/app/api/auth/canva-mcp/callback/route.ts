@@ -6,7 +6,7 @@ import { MCP_VERIFIER_COOKIE, mcpRedirectUri, requestMcpToken, saveMcpTokens } f
 // Canva's MCP server sends the user back here after "Connect Canva editor".
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const back = (query: string) => NextResponse.redirect(`${appOrigin()}/connector/canva?${query}`);
+  const back = (query: string) => NextResponse.redirect(`${appOrigin(request)}/connector/canva?${query}`);
   const fail = (message: string) => back(`error=${encodeURIComponent(`Canva editor: ${message}`)}`);
 
   const error = url.searchParams.get("error");
@@ -15,19 +15,21 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   if (!code) return fail("Canva didn't send an authorization code. Try connecting again.");
 
-  const [state, verifier] = ((await cookies()).get(MCP_VERIFIER_COOKIE)?.value || "").split(".");
-  if (!verifier) return fail("the sign-in took too long or started on a different address. Try again.");
+  // Client IDs from Canva can contain dots, so split off state and verifier and keep the rest
+  const [state, verifier, ...clientParts] = ((await cookies()).get(MCP_VERIFIER_COOKIE)?.value || "").split(".");
+  const clientId = clientParts.join(".");
+  if (!verifier || !clientId) return fail("the sign-in took too long or started on a different address. Try again.");
   if (state !== url.searchParams.get("state")) return fail("sign-in check failed. Try again.");
 
   try {
-    const token = await requestMcpToken({
+    const token = await requestMcpToken(clientId, {
       grant_type: "authorization_code",
       code,
       code_verifier: verifier,
-      redirect_uri: mcpRedirectUri(),
+      redirect_uri: mcpRedirectUri(request),
     });
     const response = back("connected=editor");
-    saveMcpTokens(response.cookies, token);
+    saveMcpTokens(response.cookies, token, clientId);
     response.cookies.delete(MCP_VERIFIER_COOKIE);
     return response;
   } catch (err) {

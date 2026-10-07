@@ -7,7 +7,7 @@ import { VERIFIER_COOKIE, appOrigin, redirectUri, requestToken, saveTokens } fro
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const back = (query: string) => NextResponse.redirect(`${appOrigin()}/connector/canva?${query}`);
+  const back = (query: string) => NextResponse.redirect(`${appOrigin(request)}/connector/canva?${query}`);
   const fail = (message: string) => back(`error=${encodeURIComponent(message)}`);
 
   const error = url.searchParams.get("error");
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       grant_type: "authorization_code",
       code,
       code_verifier: verifier,
-      redirect_uri: redirectUri(),
+      redirect_uri: redirectUri(request),
     });
     const response = back("connected=1");
     saveTokens(response.cookies, token);

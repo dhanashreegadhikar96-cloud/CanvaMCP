@@ -27,17 +27,29 @@ const COOKIE = {
 export const VERIFIER_COOKIE = COOKIE.verifier;
 
 /**
- * The exact callback URL registered under Outside Canva > Redirect URLs. Canva only accepts an exact
- * match, and for local development it must use 127.0.0.1 (not localhost). We don't derive it from
- * the request: Next's dev server reports localhost even when the browser used 127.0.0.1.
+ * The app's public address, taken from the request: your Vercel domain when deployed
+ * (x-forwarded-host), or 127.0.0.1 locally. Canva only accepts 127.0.0.1 redirect URLs for local
+ * development, so localhost is turned into 127.0.0.1. CANVA_REDIRECT_URI overrides all of this.
+ * (Use the Host header, not request.url: Next's dev server reports localhost in request.url.)
  */
-export function redirectUri(): string {
-  return process.env.CANVA_REDIRECT_URI || "http://127.0.0.1:3000/api/auth/canva/callback";
+export function appOrigin(request?: Request): string {
+  if (process.env.CANVA_REDIRECT_URI) return new URL(process.env.CANVA_REDIRECT_URI).origin;
+  const headers = request?.headers;
+  const host = (headers?.get("x-forwarded-host") || headers?.get("host") || "127.0.0.1:3000").split(",")[0].trim();
+  if (/^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host)) {
+    return `http://${host.replace(/^localhost/, "127.0.0.1")}`;
+  }
+  const proto = (headers?.get("x-forwarded-proto") || "https").split(",")[0].trim();
+  return `${proto}://${host}`;
 }
 
-/** Origin of the redirect URI: sign-in starts and ends here so its cookies stay on one host. */
-export function appOrigin(): string {
-  return new URL(redirectUri()).origin;
+/**
+ * The callback URL sent to Canva. It must exactly match one of the app's
+ * Outside Canva > Redirect URLs, e.g. http://127.0.0.1:3000/api/auth/canva/callback locally and
+ * https://<your-app>.vercel.app/api/auth/canva/callback when deployed.
+ */
+export function redirectUri(request?: Request): string {
+  return process.env.CANVA_REDIRECT_URI || `${appOrigin(request)}/api/auth/canva/callback`;
 }
 
 export function credentials(): { clientId: string; clientSecret: string } | null {

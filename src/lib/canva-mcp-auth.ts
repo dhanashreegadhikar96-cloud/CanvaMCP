@@ -31,20 +31,36 @@ const COOKIE = {
   refresh: "canva_mcp_refresh",
   expires: "canva_mcp_expires",
   verifier: "canva_mcp_verifier",
+  client: "canva_mcp_client", // which registration (client ID) this sign-in belongs to
 } as const;
 export const MCP_VERIFIER_COOKIE = COOKIE.verifier;
 
-export function mcpRedirectUri(): string {
-  return process.env.CANVA_MCP_REDIRECT_URI || `${appOrigin()}/api/auth/canva-mcp/callback`;
+/** Callback for the editor sign-in on this request's address (127.0.0.1 locally, your domain when deployed). */
+export function mcpRedirectUri(request?: Request): string {
+  return process.env.CANVA_MCP_REDIRECT_URI || `${appOrigin(request)}/api/auth/canva-mcp/callback`;
 }
 
-/** The app's client ID at Canva's MCP server, registering the app the first time it's needed. */
-export async function mcpClientId(): Promise<string> {
+// Registrations are per callback URL (local and deployed each need their own). Kept in memory and,
+// where the disk is writable (local dev), in .canva-mcp-client.json as { [redirect_uri]: client_id }.
+const registered = new Map<string, string>();
+
+/**
+ * The app's client ID at Canva's MCP server for this callback URL, registering the app the first time.
+ * On Vercel the disk isn't writable, so set CANVA_MCP_CLIENT_ID (registered for the deployed callback)
+ * to avoid a new registration after every cold start.
+ */
+export async function mcpClientId(redirect: string): Promise<string> {
   if (process.env.CANVA_MCP_CLIENT_ID) return process.env.CANVA_MCP_CLIENT_ID;
-  const redirect = mcpRedirectUri();
+  if (registered.has(redirect)) return registered.get(redirect)!;
+  let saved: Record<string, string> = {};
   try {
-    const saved = JSON.parse(await readFile(CLIENT_FILE, "utf8"));
-    if (saved.client_id && saved.redirect_uri === redirect) return saved.client_id;
+    const file = JSON.parse(await readFile(CLIENT_FILE, "utf8"));
+    // older format: { client_id, redirect_uri }
+    saved = file.client_id ? { [file.redirect_uri]: file.client_id } : file;
+    if (saved[redirect]) {
+      registered.set(redirect, saved[redirect]);
+      return saved[redirect];
+    }
   } catch {
     // not registered yet
   }
@@ -61,15 +77,16 @@ export async function mcpClientId(): Promise<string> {
   });
   if (!res.ok) throw new Error(`Canva's MCP server refused to register the app (${res.status}): ${await res.text()}`);
   const client = await res.json();
-  await writeFile(CLIENT_FILE, JSON.stringify({ client_id: client.client_id, redirect_uri: redirect }, null, 2)).catch(() => undefined);
+  registered.set(redirect, client.client_id);
+  await writeFile(CLIENT_FILE, JSON.stringify({ ...saved, [redirect]: client.client_id }, null, 2)).catch(() => undefined);
   return client.client_id;
 }
 
-export function mcpAuthorizeUrl(clientId: string, challenge: string, state: string): string {
+export function mcpAuthorizeUrl(clientId: string, redirect: string, challenge: string, state: string): string {
   const url = new URL(`${AUTH_BASE}/authorize`);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", mcpRedirectUri());
+  url.searchParams.set("redirect_uri", redirect);
   url.searchParams.set("code_challenge", challenge);
   url.searchParams.set("code_challenge_method", "S256");
   url.searchParams.set("state", state);
@@ -80,11 +97,12 @@ export function mcpAuthorizeUrl(clientId: string, challenge: string, state: stri
 
 type TokenResponse = { access_token: string; refresh_token?: string; expires_in?: number };
 
-export async function requestMcpToken(params: Record<string, string>): Promise<TokenResponse> {
+/** Token request at Canva's MCP server, for the registration (clientId) the user signed in with. */
+export async function requestMcpToken(clientId: string, params: Record<string, string>): Promise<TokenResponse> {
   const res = await fetch(`${AUTH_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ ...params, client_id: await mcpClientId(), resource: MCP_URL }).toString(),
+    body: new URLSearchParams({ ...params, client_id: clientId, resource: MCP_URL }).toString(),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -104,7 +122,7 @@ const cookieOptions = (maxAge: number) => ({
   maxAge,
 });
 
-export function saveMcpTokens(cookies: CookieWriter, token: TokenResponse) {
+export function saveMcpTokens(cookies: CookieWriter, token: TokenResponse, clientId: string) {
   // Browsers drop cookies over ~4 KB; fail loudly rather than lose the sign-in silently
   if (token.access_token.length > 3800 || (token.refresh_token?.length ?? 0) > 3800) {
     throw new Error("Canva's editor token is too large to keep in a cookie. Tell the developer (needs a server-side token store).");
@@ -113,9 +131,10 @@ export function saveMcpTokens(cookies: CookieWriter, token: TokenResponse) {
   cookies.set(COOKIE.access, token.access_token, cookieOptions(expiresIn));
   cookies.set(COOKIE.expires, String(Date.now() + expiresIn * 1000), cookieOptions(30 * 24 * 60 * 60));
   if (token.refresh_token) cookies.set(COOKIE.refresh, token.refresh_token, cookieOptions(30 * 24 * 60 * 60));
+  cookies.set(COOKIE.client, clientId, cookieOptions(30 * 24 * 60 * 60));
 }
 
-export const MCP_TOKEN_COOKIES = [COOKIE.access, COOKIE.refresh, COOKIE.expires];
+export const MCP_TOKEN_COOKIES = [COOKIE.access, COOKIE.refresh, COOKIE.expires, COOKIE.client];
 
 /** The last sign-in renewal error (for the chat's debug log). */
 export const lastRefreshError: { mcp?: string; rest?: string } = {};
@@ -132,8 +151,10 @@ export async function getMcpAccessToken(cookies: CookieStore): Promise<string | 
   const refresh = cookies.get(COOKIE.refresh)?.value;
   if (!refresh) return access ?? null;
   try {
-    const token = await requestMcpToken({ grant_type: "refresh_token", refresh_token: refresh });
-    saveMcpTokens(cookies, token);
+    // Sign-ins from before the client cookie existed were made with the local registration
+    const clientId = cookies.get(COOKIE.client)?.value || (await mcpClientId(mcpRedirectUri()));
+    const token = await requestMcpToken(clientId, { grant_type: "refresh_token", refresh_token: refresh });
+    saveMcpTokens(cookies, token, clientId);
     return token.access_token;
   } catch (err) {
     console.error("[canva editor] couldn't renew the sign-in:", err instanceof Error ? err.message : err);
