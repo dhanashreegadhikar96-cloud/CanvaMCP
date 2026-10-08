@@ -8,7 +8,10 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { appOrigin } from "./canva-auth";
 
-export const MCP_URL = "https://mcp.canva.com/mcp";
+export const MCP_URL = "https://mcp.canva.com/mcp"; // self-registered / waitlist clients
+// Developer Portal apps with "Canva MCP" turned on use this server instead, and sign in through Canva's
+// normal OAuth (www.canva.com, same as the REST API), so the REST sign-in's token works here.
+export const PORTAL_MCP_URL = "https://api.canva.com/connect/v1/mcp";
 const AUTH_BASE = "https://mcp.canva.com";
 const CLIENT_FILE = ".canva-mcp-client.json";
 
@@ -50,10 +53,6 @@ const registered = new Map<string, string>();
  * to avoid a new registration after every cold start.
  */
 export async function mcpClientId(redirect: string): Promise<string> {
-  // Developer Portal route (Canva's supported one): your app has "Canva MCP" turned on, so the editor
-  // signs in with the same client ID (and secret) as the REST API. Needed for non-local addresses:
-  // Canva's MCP server only accepts 127.0.0.1-style redirect URLs from self-registered clients.
-  if (usePortalApp()) return process.env.CANVA_CLIENT_ID!;
   if (process.env.CANVA_MCP_CLIENT_ID) return process.env.CANVA_MCP_CLIENT_ID;
   if (registered.has(redirect)) return registered.get(redirect)!;
   let saved: Record<string, string> = {};
@@ -102,9 +101,11 @@ export function mcpAuthorizeUrl(clientId: string, redirect: string, challenge: s
 type TokenResponse = { access_token: string; refresh_token?: string; expires_in?: number };
 
 /**
- * True when CANVA_MCP_USE_PORTAL_APP=true: the editor uses your Developer Portal app (client ID + secret)
- * instead of self-registration. Turn on "Canva MCP" for the app and add the editor callback URLs
- * (…/api/auth/canva-mcp/callback) to its Redirect URLs first.
+ * True when CANVA_MCP_USE_PORTAL_APP=true: your Developer Portal app has "Canva MCP" turned on, so the
+ * normal Canva sign-in (www.canva.com OAuth, canva-auth.ts) also covers Canva's MCP tools at
+ * PORTAL_MCP_URL, and the self-registered editor sign-in below isn't used. This is Canva's supported
+ * route, and the one that works on a deployed site: mcp.canva.com only accepts 127.0.0.1 return
+ * addresses from self-registered clients.
  */
 export function usePortalApp(): boolean {
   return process.env.CANVA_MCP_USE_PORTAL_APP === "true" && Boolean(process.env.CANVA_CLIENT_ID && process.env.CANVA_CLIENT_SECRET);
@@ -112,15 +113,9 @@ export function usePortalApp(): boolean {
 
 /** Token request at Canva's MCP server, for the registration (clientId) the user signed in with. */
 export async function requestMcpToken(clientId: string, params: Record<string, string>): Promise<TokenResponse> {
-  const headers: Record<string, string> = { "Content-Type": "application/x-www-form-urlencoded" };
-  // The Developer Portal app is a confidential client: it proves itself with its secret
-  // (client_secret_basic, which mcp.canva.com lists as supported). Self-registered clients have no secret.
-  if (usePortalApp() && clientId === process.env.CANVA_CLIENT_ID) {
-    headers.Authorization = `Basic ${Buffer.from(`${process.env.CANVA_CLIENT_ID}:${process.env.CANVA_CLIENT_SECRET}`).toString("base64")}`;
-  }
   const res = await fetch(`${AUTH_BASE}/token`, {
     method: "POST",
-    headers,
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ ...params, client_id: clientId, resource: MCP_URL }).toString(),
   });
   if (!res.ok) {

@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { cookies } from "next/headers";
 import * as canva from "@/lib/canva";
 import { getAccessToken, refreshErrors } from "@/lib/canva-auth";
-import { getMcpAccessToken, lastRefreshError } from "@/lib/canva-mcp-auth";
+import { PORTAL_MCP_URL, getMcpAccessToken, lastRefreshError, usePortalApp } from "@/lib/canva-mcp-auth";
 import { McpAuthError, callCanvaMcpToolWaiting, connectCanvaMcp, toGeminiSchema } from "@/lib/canva-mcp";
 
 export const runtime = "nodejs";
@@ -431,8 +431,12 @@ export async function POST(request: Request) {
 
   // From "Connect Canva" (httpOnly cookies), renewed here when it has expired
   const canvaToken = await getAccessToken(cookieStore);
-  // From "Connect Canva editor" (Canva's MCP server). When present, the chat uses Canva's own tools.
-  const mcpToken = await getMcpAccessToken(cookieStore);
+  // Canva's MCP tools (incl. the design editor). With the Developer Portal app ("Canva MCP" on, and
+  // CANVA_MCP_USE_PORTAL_APP=true) the same Canva sign-in token works on Canva's MCP server; otherwise
+  // the separate self-registered editor sign-in is used.
+  const portal = usePortalApp();
+  const mcpToken = portal ? canvaToken : await getMcpAccessToken(cookieStore);
+  const mcpServer = portal ? PORTAL_MCP_URL : undefined;
 
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -491,7 +495,7 @@ export async function POST(request: Request) {
         let maxTurns = MAX_TURNS;
         let execute = (name: string, args: Record<string, any>) => executeCanvaTool(name, args, canvaToken!);
         if (mcpToken) {
-          mcp = await connectCanvaMcp(mcpToken);
+          mcp = await connectCanvaMcp(mcpToken, mcpServer);
           const client = mcp.client;
           model = EDITOR_MODEL;
           systemInstruction = EDITOR_INSTRUCTION;
@@ -501,7 +505,7 @@ export async function POST(request: Request) {
             description: (t.description ?? "").slice(0, 4000),
             parametersJsonSchema: toGeminiSchema(t.inputSchema),
           }));
-          debugLog({ editorTools: mcp.tools.map((t) => t.name) });
+          debugLog({ editorServer: mcpServer ?? "mcp.canva.com", editorTools: mcp.tools.map((t) => t.name) });
           const available = new Set(mcp.tools.map((t) => t.name));
           execute = async (name, args) => {
             const { text, isError } = await callCanvaMcpToolWaiting(client, name, args, available);
@@ -627,7 +631,14 @@ export async function POST(request: Request) {
         if (err instanceof canva.CanvaApiError && err.status === 401) {
           send({ type: "error", message: "Your Canva connection has expired. Connect again to continue.", connect: true });
         } else if (err instanceof McpAuthError || (mcp && /401|unauthori[sz]ed|invalid_token/i.test(String((err as any)?.message)))) {
-          send({ type: "error", message: "Your Canva editor connection has expired. Connect the editor again to continue.", connect: true });
+          const detail = String((err as any)?.message ?? "").slice(0, 300);
+          send({
+            type: "error",
+            message: portal
+              ? `Canva's MCP server didn't accept your Canva sign-in. Disconnect and connect Canva again. (Canva said: ${detail})`
+              : "Your Canva editor connection has expired. Connect the editor again to continue.",
+            connect: true,
+          });
         } else {
           send({
             type: "error",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { CHAIN_COOKIE, appOrigin, isConnected } from "@/lib/canva-auth";
-import { isMcpConnected } from "@/lib/canva-mcp-auth";
+import { isMcpConnected, usePortalApp } from "@/lib/canva-mcp-auth";
 
 // One "Connect Canva" for both of Canva's sign-ins, which issue separate tokens:
 //   1. the REST API sign-in (your Developer Portal app): search, folders, export
@@ -19,7 +19,8 @@ export async function GET(request: Request) {
   }
   const cookieStore = await cookies();
   const needRest = !isConnected(cookieStore);
-  const needEditor = !isMcpConnected(cookieStore);
+  // With the Developer Portal app, the Canva sign-in also covers Canva's MCP tools
+  const needEditor = !usePortalApp() && !isMcpConnected(cookieStore);
 
   if (!needRest && !needEditor) return NextResponse.redirect(`${origin}/connector/canva`);
   if (!needRest) return NextResponse.redirect(`${origin}/api/auth/canva-mcp/login`);

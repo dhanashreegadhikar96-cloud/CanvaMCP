@@ -9,9 +9,9 @@ const SKIP_TOOLS = new Set(["request-outline-review", "generate-design-structure
 
 export class McpAuthError extends Error {}
 
-export async function connectCanvaMcp(token: string) {
+export async function connectCanvaMcp(token: string, serverUrl: string = MCP_URL) {
   const client = new Client({ name: "nsoffice-canva-chat", version: "1.0.0" });
-  const transport = new StreamableHTTPClientTransport(new URL(MCP_URL), {
+  const transport = new StreamableHTTPClientTransport(new URL(serverUrl), {
     requestInit: { headers: { Authorization: `Bearer ${token}` } },
   });
   try {
