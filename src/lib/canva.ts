@@ -28,14 +28,24 @@ export class CanvaApiError extends Error {
 }
 
 async function canvaFetch<T>(endpoint: string, token: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
-  });
+  const send = () =>
+    fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+  let res = await send();
+
+  // Rate limited ("too many requests"): wait as long as Canva asks (Retry-After, capped at 30s) and try once more
+  if (res.status === 429) {
+    const retryAfter = Number(res.headers.get("retry-after"));
+    const waitSeconds = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter, 30) : 10;
+    await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
+    res = await send();
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

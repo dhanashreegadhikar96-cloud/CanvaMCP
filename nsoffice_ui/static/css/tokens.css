@@ -74,6 +74,12 @@
     --ns-connect-hover: #2563eb;
     --ns-alert: #ef4444;
 
+    /* Notices inside chat replies (usage limits etc.); backgrounds reuse the amber/blue tile tokens */
+    --ns-notice-warning-border: #fcd34d;
+    --ns-notice-warning-text: #78350f;
+    --ns-notice-info-border: #bae6fd;
+    --ns-notice-info-text: #0c4a6e;
+
     /* Ask-bar connection button (production NSOffice): red when not connected, green when connected */
     --ns-connect-off-bg: #fdecec;
     --ns-connect-off: #ef4444;

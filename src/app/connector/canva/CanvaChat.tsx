@@ -66,6 +66,7 @@ function toolLabel(name: string) {
 
 type Part =
   | { kind: "text"; text: string }
+  | { kind: "notice"; tone: "info" | "warning"; title: string; text: string; resetAt?: string }
   | { kind: "tool"; id: string; name: string; input?: unknown; result?: string; status: "running" | "done" | "error" };
 
 type Item =
@@ -78,7 +79,8 @@ type StreamEvent =
   | { type: "tool_use"; id: string; name: string; input: unknown }
   | { type: "tool_result"; tool_use_id: string; is_error: boolean; text: string }
   | { type: "done"; messages: Anthropic.Beta.BetaMessageParam[] }
-  | { type: "error"; message: string; connect?: boolean };
+  | { type: "error"; message: string; connect?: boolean }
+  | { type: "notice"; tone: "info" | "warning"; title: string; text: string; resetAt?: string };
 
 function applyEvent(parts: Part[], event: StreamEvent): Part[] {
   const next = [...parts];
@@ -104,9 +106,31 @@ function applyEvent(parts: Part[], event: StreamEvent): Part[] {
       }
       return next;
     }
+    case "notice":
+      next.push({ kind: "notice", tone: event.tone, title: event.title, text: event.text, resetAt: event.resetAt });
+      return next;
     default:
       return next;
   }
+}
+
+// App-written notice (e.g. Canva usage limits), shown in the reply whatever the model says
+function Notice({ part }: { part: Extract<Part, { kind: "notice" }> }) {
+  const reset = part.resetAt ? new Date(part.resetAt) : null;
+  return (
+    <div className={`chat-notice chat-notice--${part.tone}`} role="status">
+      <i className={part.tone === "warning" ? "fa-solid fa-triangle-exclamation" : "fa-regular fa-clock"}></i>
+      <div>
+        <div className="chat-notice-title">{part.title}</div>
+        <div className="chat-notice-text">
+          {part.text}
+          {reset && !Number.isNaN(reset.getTime()) && (
+            <> Resets {reset.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}.</>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ToolStep({ part }: { part: Extract<Part, { kind: "tool" }> }) {
@@ -379,6 +403,8 @@ export default function CanvaChat({
                         <div key={j} className="chat-bubble-text">
                           <Markdown text={part.text} />
                         </div>
+                      ) : part.kind === "notice" ? (
+                        <Notice key={`n${j}`} part={part} />
                       ) : (
                         <ToolStep key={part.id} part={part} />
                       ),

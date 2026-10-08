@@ -98,8 +98,9 @@ export async function callCanvaMcpToolWaiting(
   args: Record<string, unknown>,
   available: Set<string>,
   timeoutMs = 180_000,
+  onRetry?: () => void,
 ) {
-  let result = await callCanvaMcpTool(client, name, args);
+  let result = await callCanvaMcpTool(client, name, args, onRetry);
   const pollTool = pollToolFor(name, available);
   const deadline = Date.now() + timeoutMs;
 
@@ -113,17 +114,64 @@ export async function callCanvaMcpToolWaiting(
     if (!job?.job_id || !job.continuation_token || !PENDING.has(job.status)) break;
     const waitSeconds = Math.min(Math.max(Number(job.polling_policy?.wait_seconds) || 5, 2), 30);
     await new Promise((resolve) => setTimeout(resolve, waitSeconds * 1000));
-    result = await callCanvaMcpTool(client, pollTool, {
-      job_id: job.job_id,
-      continuation_token: job.continuation_token,
-      user_intent: typeof args.user_intent === "string" ? args.user_intent : "Wait for the design to finish",
-    });
+    result = await callCanvaMcpTool(
+      client,
+      pollTool,
+      {
+        job_id: job.job_id,
+        continuation_token: job.continuation_token,
+        user_intent: typeof args.user_intent === "string" ? args.user_intent : "Wait for the design to finish",
+      },
+      onRetry,
+    );
   }
   return result;
 }
 
-/** Run one Canva MCP tool; returns its text output (images are noted, not embedded). */
-export async function callCanvaMcpTool(client: Client, name: string, args: Record<string, unknown>) {
+/** "Too many requests" from Canva: worth one retry after a short wait. */
+export function isRateLimited(text: string): boolean {
+  return /rate[ _-]?limit|too many requests|\b429\b/i.test(text);
+}
+
+/** Canva's AI allowance (credits/quota) is used up: retrying won't help until it resets. */
+export function isQuotaExhausted(text: string): boolean {
+  return /quota|credit/i.test(text) && /exceed|exhaust|limit|used up|insufficient|no (more )?credits/i.test(text);
+}
+
+export const RATE_LIMIT_RETRY_SECONDS = 20;
+
+/** The reset time Canva gives for a limit, if any (ISO date-time), e.g. "resets_at": "2026-11-01T00:00:00Z". */
+export function limitResetAt(text: string): string | undefined {
+  const iso = text.match(/resets?_?at"?\s*[:=]\s*"?(\d{4}-\d{2}-\d{2}[T ]?[\d:.]*Z?)/i) || text.match(/resets?\s+(?:at|on)\s+(\d{4}-\d{2}-\d{2}[T ]?[\d:.]*Z?)/i);
+  if (iso) {
+    const value = iso[1].trim().replace(/[.:]+$/, ""); // drop a sentence's closing "."
+    // A bare date ("2026-11-01") is read as UTC midnight, like Canva's full timestamps
+    return new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00Z` : value).toISOString();
+  }
+  const unix = text.match(/resets?_?at"?\s*[:=]\s*(\d{10,13})/i);
+  if (unix) return new Date(Number(unix[1]) * (unix[1].length === 10 ? 1000 : 1)).toISOString();
+  return undefined;
+}
+
+/**
+ * Run one Canva MCP tool; returns its text output (images are noted, not embedded).
+ * A "too many requests" answer gets one retry after RATE_LIMIT_RETRY_SECONDS; onRetry lets the chat tell the user.
+ */
+export async function callCanvaMcpTool(
+  client: Client,
+  name: string,
+  args: Record<string, unknown>,
+  onRetry?: () => void,
+) {
+  const first = await callCanvaMcpToolOnce(client, name, args);
+  if (!first.isError || !isRateLimited(first.text) || isQuotaExhausted(first.text)) return first;
+  // Per-minute limit (e.g. ~20 design creations a minute): wait it out once instead of failing
+  onRetry?.();
+  await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_RETRY_SECONDS * 1000));
+  return callCanvaMcpToolOnce(client, name, args);
+}
+
+async function callCanvaMcpToolOnce(client: Client, name: string, args: Record<string, unknown>) {
   const result: any = await client.callTool({ name, arguments: args });
   const parts: string[] = [];
   for (const item of result.content ?? []) {

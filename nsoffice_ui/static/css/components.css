@@ -942,6 +942,49 @@
     white-space: pre-wrap;
 }
 
+/* App notice inside a reply (e.g. a connector's usage limit): icon, bold title, short explanation */
+.chat-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin: 0 0 0.75rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 0.875rem;
+    line-height: 1.45;
+}
+
+.chat-notice > i {
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.chat-notice-title {
+    font-weight: 600;
+    margin-bottom: 0.1rem;
+}
+
+.chat-notice--warning {
+    background-color: var(--ns-tile-amber-bg);
+    border-color: var(--ns-notice-warning-border);
+    color: var(--ns-notice-warning-text);
+}
+
+.chat-notice--warning > i {
+    color: var(--ns-tile-amber);
+}
+
+.chat-notice--info {
+    background-color: var(--ns-tile-blue-bg);
+    border-color: var(--ns-notice-info-border);
+    color: var(--ns-notice-info-text);
+}
+
+.chat-notice--info > i {
+    color: var(--ns-tile-blue);
+}
+
 /* "Working" dots */
 .chat-typing {
     display: inline-flex;

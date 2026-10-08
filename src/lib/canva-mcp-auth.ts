@@ -108,7 +108,13 @@ type TokenResponse = { access_token: string; refresh_token?: string; expires_in?
  * addresses from self-registered clients.
  */
 export function usePortalApp(): boolean {
-  return process.env.CANVA_MCP_USE_PORTAL_APP === "true" && Boolean(process.env.CANVA_CLIENT_ID && process.env.CANVA_CLIENT_SECRET);
+  return portalSetting() && Boolean(process.env.CANVA_CLIENT_ID && process.env.CANVA_CLIENT_SECRET);
+}
+
+/** CANVA_MCP_USE_PORTAL_APP as a yes/no, forgiving about case, quotes and spaces ("true", "TRUE", "1", "yes"). */
+export function portalSetting(): boolean {
+  const value = (process.env.CANVA_MCP_USE_PORTAL_APP ?? "").trim().replace(/^["']|["']$/g, "").toLowerCase();
+  return ["true", "1", "yes"].includes(value);
 }
 
 /** Token request at Canva's MCP server, for the registration (clientId) the user signed in with. */

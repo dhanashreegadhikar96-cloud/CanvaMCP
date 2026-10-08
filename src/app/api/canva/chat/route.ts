@@ -3,7 +3,16 @@ import { cookies } from "next/headers";
 import * as canva from "@/lib/canva";
 import { getAccessToken, refreshErrors } from "@/lib/canva-auth";
 import { PORTAL_MCP_URL, getMcpAccessToken, lastRefreshError, usePortalApp } from "@/lib/canva-mcp-auth";
-import { McpAuthError, callCanvaMcpToolWaiting, connectCanvaMcp, toGeminiSchema } from "@/lib/canva-mcp";
+import {
+  McpAuthError,
+  RATE_LIMIT_RETRY_SECONDS,
+  callCanvaMcpToolWaiting,
+  connectCanvaMcp,
+  isQuotaExhausted,
+  isRateLimited,
+  limitResetAt,
+  toGeminiSchema,
+} from "@/lib/canva-mcp";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -42,6 +51,14 @@ nothing overlaps; keep text inside its box.
 - Colours are hex codes like #2563EB, never colour names.
 - For a new slide in an existing presentation use the add_page operation, then add elements to that page.
 - For a brand-new diagram slide, create a blank presentation first (create-design), then edit it as above.
+
+Usage limits: creating designs with Canva AI counts against the user's Canva limits (a per-minute rate \
+limit, and an AI allowance that resets later). To save it: for small changes, edit the existing design instead of \
+generating a new one, and create each design once (never "try again" with another generation). If a tool reports \
+a rate limit, quota or credit error, don't retry it or work around it with another design-creation tool. Tell the \
+user exactly what Canva said, quoting its message and any reset time or remaining amount, and say whether it's a \
+short wait (rate limit) or the AI allowance (quota). Then offer what still works: editing, exporting, organising, \
+or starting from a blank design and adding elements.
 
 Never mention tool or function names to the user. Keep replies concise and friendly, and include the Canva link for \
 designs you mention when you have one, as a Markdown link [Title](url).`;
@@ -83,6 +100,14 @@ Confirm before deleting pages.
 - Exports return download links that expire after 24 hours.
 - You can't delete designs, edit elements that aren't data fields, or use brand templates. Say so plainly if asked.
 
+Usage limits: creating designs with Canva AI counts against the user's Canva limits (a per-minute rate \
+limit, and an AI allowance that resets later). To save it: for small changes, edit the existing design instead of \
+generating a new one, and create each design once (never "try again" with another generation). If a tool reports \
+a rate limit, quota or credit error, don't retry it or work around it with another design-creation tool. Tell the \
+user exactly what Canva said, quoting its message and any reset time or remaining amount, and say whether it's a \
+short wait (rate limit) or the AI allowance (quota). Then offer what still works: editing, exporting, organising, \
+or starting from a blank design and adding elements.
+
 Never mention tool or function names to the user; describe what you can do in plain words.
 
 Keep replies concise and friendly. After a tool call, say what happened in a sentence or two and list the relevant items. \
@@ -95,7 +120,35 @@ type StreamEvent =
   | { type: "tool_use"; id: string; name: string; input: unknown }
   | { type: "tool_result"; tool_use_id: string; is_error: boolean; text: string }
   | { type: "done"; messages: unknown[] }
-  | { type: "error"; message: string; connect?: boolean }; // connect: the user needs to (re)connect Canva
+  | { type: "error"; message: string; connect?: boolean } // connect: the user needs to (re)connect Canva
+  // App-written notice shown in the reply (e.g. Canva usage limits), independent of the model's wording
+  | { type: "notice"; tone: "info" | "warning"; title: string; text: string; resetAt?: string };
+
+/** The notice to show for a Canva limit in a tool result, if any. */
+function limitNotice(toolResult: string): Extract<StreamEvent, { type: "notice" }> | null {
+  if (isQuotaExhausted(toolResult)) {
+    return {
+      type: "notice",
+      tone: "warning",
+      title: "Canva AI allowance used up",
+      text:
+        "Creating new designs with Canva AI is paused for this account until the allowance resets. " +
+        "You can still edit, export and organise your designs, or start from a blank design. " +
+        "Canva Pro and Teams include a larger allowance.",
+      resetAt: limitResetAt(toolResult),
+    };
+  }
+  if (isRateLimited(toolResult)) {
+    return {
+      type: "notice",
+      tone: "warning",
+      title: "Canva's limit for now",
+      text: "Too many requests to Canva in a short time. Try again in about a minute. You can still edit, export or organise designs.",
+      resetAt: limitResetAt(toolResult),
+    };
+  }
+  return null;
+}
 
 const FUNCTION_DECLARATIONS = [
   {
@@ -420,7 +473,10 @@ async function runCanvaTool(name: string, args: Record<string, any>, token: stri
     return JSON.stringify(result);
   } catch (err) {
     if (err instanceof canva.CanvaApiError && err.status === 401) throw err;
-    return JSON.stringify({ error: err instanceof Error ? err.message : String(err) });
+    return JSON.stringify({
+      error: err instanceof Error ? err.message : String(err),
+      ...(err instanceof canva.CanvaApiError ? { status: err.status } : {}),
+    });
   }
 }
 
@@ -508,7 +564,14 @@ export async function POST(request: Request) {
           debugLog({ editorServer: mcpServer ?? "mcp.canva.com", editorTools: mcp.tools.map((t) => t.name) });
           const available = new Set(mcp.tools.map((t) => t.name));
           execute = async (name, args) => {
-            const { text, isError } = await callCanvaMcpToolWaiting(client, name, args, available);
+            const { text, isError } = await callCanvaMcpToolWaiting(client, name, args, available, undefined, () =>
+              send({
+                type: "notice",
+                tone: "info",
+                title: "Canva is busy",
+                text: `Too many requests in a short time. Waiting ${RATE_LIMIT_RETRY_SECONDS} seconds, then trying again…`,
+              }),
+            );
             debugLog({ editorTool: name, args, isError, result: text.slice(0, 2000) });
             return isError ? JSON.stringify({ error: text }) : text;
           };
@@ -532,6 +595,7 @@ export async function POST(request: Request) {
         let currentTurn = 0;
 
         let textRound = 0; // the round that last sent text
+        const noticesShown = new Set<string>(); // one limit notice of each kind per reply
         while (currentTurn < maxTurns) {
           currentTurn++;
 
@@ -575,6 +639,11 @@ export async function POST(request: Request) {
 
               const toolResultStr = await execute(toolName, args);
               const isError = toolResultStr.includes('"error":');
+              const notice = isError ? limitNotice(toolResultStr) : null;
+              if (notice && !noticesShown.has(notice.title)) {
+                noticesShown.add(notice.title);
+                send(notice);
+              }
 
               send({
                 type: "tool_result",
