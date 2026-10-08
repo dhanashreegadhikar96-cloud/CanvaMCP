@@ -74,6 +74,12 @@
     --ns-connect-hover: #2563eb;
     --ns-alert: #ef4444;
 
+    /* Ask-bar connection button (production NSOffice): red when not connected, green when connected */
+    --ns-connect-off-bg: #fdecec;
+    --ns-connect-off: #ef4444;
+    --ns-connect-on-bg: #e8f9ef;
+    --ns-connect-on: #22c55e;
+
     /* Composer (home ask bar) */
     --ns-send: #818cf8;
     --ns-send-hover: #6366f1;

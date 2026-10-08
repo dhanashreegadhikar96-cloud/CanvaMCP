@@ -25,6 +25,8 @@ const COOKIE = {
   verifier: "canva_oauth_verifier",
 } as const;
 export const VERIFIER_COOKIE = COOKIE.verifier;
+/** Set by "Connect Canva" when the editor sign-in should follow the REST one. */
+export const CHAIN_COOKIE = "canva_connect_chain";
 
 /**
  * The app's public address, taken from the request: your Vercel domain when deployed

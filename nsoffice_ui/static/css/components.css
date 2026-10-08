@@ -1250,20 +1250,26 @@
     color: var(--ns-text-on-primary);
 }
 
-/* Ask bar button that opens the dialog: a plug with a red dot while not connected */
+/* Ask bar button that opens the dialog (production NSOffice): an outline plug in a 35px circle with a
+   status dot at its top right. Red circle + red plug + red dot until connected; green once connected. */
 .composer-connect {
     position: relative;
-    width: 40px;
-    height: 40px;
+    width: 35px;
+    height: 35px;
     flex-shrink: 0;
     border: none;
     border-radius: 50%;
-    background-color: var(--ns-tile-red-bg);
-    color: var(--ns-tile-red);
+    background-color: var(--ns-connect-off-bg);
+    color: var(--ns-connect-off);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+}
+
+.composer-connect svg {
+    width: 16px;
+    height: 16px;
 }
 
 .composer-connect::after {
@@ -1271,17 +1277,17 @@
     position: absolute;
     top: 6px;
     right: 7px;
-    width: 7px;
-    height: 7px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background-color: var(--ns-alert);
+    background-color: var(--ns-connect-off);
 }
 
 .composer-connect--ok {
-    background-color: var(--ns-tile-green-bg);
-    color: var(--ns-tile-green);
+    background-color: var(--ns-connect-on-bg);
+    color: var(--ns-connect-on);
 }
 
 .composer-connect--ok::after {
-    display: none;
+    background-color: var(--ns-connect-on);
 }

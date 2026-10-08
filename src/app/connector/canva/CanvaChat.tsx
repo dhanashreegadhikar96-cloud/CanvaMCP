@@ -138,25 +138,7 @@ function ToolStep({ part }: { part: Extract<Part, { kind: "tool" }> }) {
 }
 
 // "Connect Apps" dialog: sign in to Canva before chatting (same pattern as NSOffice's assistants).
-// Two Canva sign-ins: "Canva" (REST API: search, folders, export, generate) and "Canva editor"
-// (Canva's MCP server: edit slides with boxes, text and arrows). Canva issues separate tokens for each.
-function ConnectRow({ icon, name, detail, connected, href }: { icon: string; name: string; detail: string; connected: boolean; href: string }) {
-  return (
-    <div className="connect-row">
-      <span className="connect-row-icon"><i className={icon}></i></span>
-      <span className="connect-row-name">
-        {name}
-        <span className="connect-row-detail">{detail}</span>
-      </span>
-      {connected ? (
-        <span className="connect-row-status"><i className="fa-solid fa-circle-check"></i> Connected</span>
-      ) : (
-        <a className="connect-btn" href={href}>Connect</a>
-      )}
-    </div>
-  );
-}
-
+// Canva issues separate tokens for its REST API and its editor (MCP server); one "Connect" does both.
 function ConnectDialog({
   error,
   rest,
@@ -180,21 +162,23 @@ function ConnectDialog({
           </button>
         </div>
         {error && <p className="ns-modal-error">{error}</p>}
-        <div className="connect-rows">
-          <ConnectRow
-            icon="fa-solid fa-palette"
-            name="Canva"
-            detail="Find, create, organise and export designs"
-            connected={rest}
-            href="/api/auth/canva/login"
-          />
-          <ConnectRow
-            icon="fa-solid fa-pen-ruler"
-            name="Canva editor"
-            detail="Edit slides: boxes, text, arrows"
-            connected={editor}
-            href="/api/auth/canva-mcp/login"
-          />
+        {/* One connection for the user; behind it are Canva's two sign-ins (REST API + editor),
+            run back to back by /api/auth/canva/connect */}
+        <div className="connect-row">
+          <span className="connect-row-icon"><i className="fa-solid fa-palette"></i></span>
+          <span className="connect-row-name">
+            Canva
+            {rest !== editor && (
+              <span className="connect-row-detail">
+                {rest ? "Editing isn't connected yet" : "Search and export aren't connected yet"}
+              </span>
+            )}
+          </span>
+          {rest && editor ? (
+            <span className="connect-row-status"><i className="fa-solid fa-circle-check"></i> Connected</span>
+          ) : (
+            <a className="connect-btn" href="/api/auth/canva/connect">{rest || editor ? "Finish connecting" : "Connect"}</a>
+          )}
         </div>
         {(rest || editor) && (
           <div className="connect-disconnect">
@@ -429,17 +413,24 @@ export default function CanvaChat({
           </span>
           <button
             type="button"
-            className={`composer-connect${connected ? " composer-connect--ok" : ""}`}
-            title={connected ? (editor ? "Canva and Canva editor connected" : "Canva connected (editor not connected)") : "Connect Canva"}
+            className={`composer-connect${rest && editor ? " composer-connect--ok" : ""}`}
+            title={rest && editor ? "Canva is connected" : connected ? "Finish connecting Canva" : "Connect Canva"}
             onClick={() => setShowConnect(true)}
           >
-            <i className="fa-solid fa-plug"></i>
+            {/* Lucide "plug", outline like NSOffice's */}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 22v-5" />
+              <path d="M9 8V2" />
+              <path d="M15 8V2" />
+              <path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z" />
+            </svg>
           </button>
           <input
             ref={inputRef}
             type="text"
             className="composer-input"
-            placeholder={connected ? "Tell Canva what to do: search, open, create or organise designs and folders" : "Connect to Canva to get started"}
+            placeholder={connected ? "Ask anything..." : "Connect to Canva to get started"}
             aria-label="Message the Canva connector"
             value={input}
             onChange={(e) => setInput(e.target.value)}

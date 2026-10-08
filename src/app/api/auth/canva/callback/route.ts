@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { VERIFIER_COOKIE, appOrigin, redirectUri, requestToken, saveTokens } from "@/lib/canva-auth";
+import { CHAIN_COOKIE, VERIFIER_COOKIE, appOrigin, redirectUri, requestToken, saveTokens } from "@/lib/canva-auth";
 
-// Canva sends the user back here after "Connect Canva". Swap the code for tokens, keep them in
-// httpOnly cookies and return to the Canva page.
+// Canva sends the user back here after the REST sign-in. Swap the code for tokens, keep them in
+// httpOnly cookies, then either continue to the Canva editor sign-in ("Connect Canva" does both)
+// or return to the Canva page.
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const back = (query: string) => NextResponse.redirect(`${appOrigin(request)}/connector/canva?${query}`);
-  const fail = (message: string) => back(`error=${encodeURIComponent(message)}`);
+  const fail = (message: string) => {
+    const response = back(`error=${encodeURIComponent(message)}`);
+    response.cookies.delete(CHAIN_COOKIE);
+    return response;
+  };
 
   const error = url.searchParams.get("error");
   if (error) {
@@ -30,9 +35,13 @@ export async function GET(request: Request) {
       code_verifier: verifier,
       redirect_uri: redirectUri(request),
     });
-    const response = back("connected=1");
+    const continueToEditor = cookieStore.get(CHAIN_COOKIE)?.value === "editor";
+    const response = continueToEditor
+      ? NextResponse.redirect(`${appOrigin(request)}/api/auth/canva-mcp/login`)
+      : back("connected=1");
     saveTokens(response.cookies, token);
     response.cookies.delete(VERIFIER_COOKIE);
+    response.cookies.delete(CHAIN_COOKIE);
     return response;
   } catch (err) {
     return fail(err instanceof Error ? err.message : "Couldn't finish connecting to Canva.");
