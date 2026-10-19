@@ -163,6 +163,45 @@ function ToolStep({ part }: { part: Extract<Part, { kind: "tool" }> }) {
 
 // "Connect Apps" dialog: sign in to Canva before chatting (same pattern as NSOffice's assistants).
 // Canva issues separate tokens for its REST API and its editor (MCP server); one "Connect" does both.
+type Which = "rest" | "mcp";
+
+// One row per connection, each with its own Connect / Disconnect
+function ConnectRow({
+  icon,
+  name,
+  detail,
+  connected,
+  href,
+  onDisconnect,
+}: {
+  icon: string;
+  name: string;
+  detail: string;
+  connected: boolean;
+  href: string;
+  onDisconnect: () => void;
+}) {
+  return (
+    <div className="connect-row">
+      <span className="connect-row-icon"><i className={icon}></i></span>
+      <span className="connect-row-name">
+        {name}
+        <span className="connect-row-detail">{detail}</span>
+      </span>
+      {connected ? (
+        <span className="connect-row-actions">
+          <span className="connect-row-status"><i className="fa-solid fa-circle-check"></i> Connected</span>
+          <button type="button" className="connect-row-disconnect" onClick={onDisconnect}>Disconnect</button>
+        </span>
+      ) : (
+        <a className="connect-btn" href={href}>Connect</a>
+      )}
+    </div>
+  );
+}
+
+// Two separate connections: Canva's REST API and Canva MCP (AI tools incl. editing). Each has its own
+// sign-in; the chat uses MCP tools when Canva MCP is connected, otherwise the REST API tools.
 function ConnectDialog({
   error,
   rest,
@@ -174,7 +213,7 @@ function ConnectDialog({
   rest: boolean;
   editor: boolean;
   onClose: () => void;
-  onDisconnect: () => void;
+  onDisconnect: (which: Which) => void;
 }) {
   return (
     <div className="ns-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -186,29 +225,24 @@ function ConnectDialog({
           </button>
         </div>
         {error && <p className="ns-modal-error">{error}</p>}
-        {/* One connection for the user; behind it are Canva's two sign-ins (REST API + editor),
-            run back to back by /api/auth/canva/connect */}
-        <div className="connect-row">
-          <span className="connect-row-icon"><i className="fa-solid fa-palette"></i></span>
-          <span className="connect-row-name">
-            Canva
-            {rest !== editor && (
-              <span className="connect-row-detail">
-                {rest ? "Editing isn't connected yet" : "Search and export aren't connected yet"}
-              </span>
-            )}
-          </span>
-          {rest && editor ? (
-            <span className="connect-row-status"><i className="fa-solid fa-circle-check"></i> Connected</span>
-          ) : (
-            <a className="connect-btn" href="/api/auth/canva/connect">{rest || editor ? "Finish connecting" : "Connect"}</a>
-          )}
+        <div className="connect-rows">
+          <ConnectRow
+            icon="fa-solid fa-palette"
+            name="Canva (REST API)"
+            detail="Search, folders, export, generate"
+            connected={rest}
+            href="/api/auth/canva/login"
+            onDisconnect={() => onDisconnect("rest")}
+          />
+          <ConnectRow
+            icon="fa-solid fa-pen-ruler"
+            name="Canva MCP"
+            detail="Canva AI tools, incl. editing designs"
+            connected={editor}
+            href="/api/auth/canva-mcp/login"
+            onDisconnect={() => onDisconnect("mcp")}
+          />
         </div>
-        {(rest || editor) && (
-          <div className="connect-disconnect">
-            <button type="button" onClick={onDisconnect}>Disconnect Canva</button>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -261,9 +295,10 @@ export default function CanvaChat({
     return () => document.removeEventListener("keydown", onKey);
   }, [showConnect]);
 
-  async function disconnect() {
-    await fetch("/api/auth/canva/logout", { method: "POST" }).catch(() => undefined);
-    setConnected(false);
+  async function disconnect(which: Which) {
+    await fetch(`/api/auth/canva/logout?which=${which}`, { method: "POST" }).catch(() => undefined);
+    if (which === "rest") setRest(false);
+    else setEditor(false);
     setConnectError("");
     setShowConnect(true);
   }
@@ -439,8 +474,8 @@ export default function CanvaChat({
           </span>
           <button
             type="button"
-            className={`composer-connect${rest && editor ? " composer-connect--ok" : ""}`}
-            title={rest && editor ? "Canva is connected" : connected ? "Finish connecting Canva" : "Connect Canva"}
+            className={`composer-connect${connected ? " composer-connect--ok" : ""}`}
+            title={connected ? `Connected: ${[rest && "Canva REST API", editor && "Canva MCP"].filter(Boolean).join(" + ")}` : "Connect Canva"}
             onClick={() => setShowConnect(true)}
           >
             {/* Lucide "plug", outline like NSOffice's */}

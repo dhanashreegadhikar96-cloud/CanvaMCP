@@ -29,7 +29,7 @@ cases guard against a past problem coming back.
 | TC-SI-06 | On Canva's approval screen click **Cancel** | Back on the page; popup shows "Canva access wasn't allowed." | | |
 | TC-SI-07 | Connect, then wait > 4 hours (or clear only `canva_access_token` cookie) and send a message | Message works: token renewed silently | 16 | |
 | TC-SI-08 | DevTools → Application → Cookies | `canva_*` cookies are **HttpOnly**; no token in the URL or page source | 16 | |
-| TC-SI-09 | Second Canva account, outside your team: Connect | Record whether Canva allows it (unreviewed integration) | Open G | |
+| TC-SI-09 | Second Canva account, not a collaborator: Connect | Until the app is released: Canva shows "The client ID is invalid." After release (or as a collaborator): sign-in works | 36 | Fail before release (8 Oct 2026, expected) |
 | TC-SI-10 | **Local**, open `http://localhost:3000/connector/canva`, click Connect | Switches to `127.0.0.1` before going to Canva; sign-in completes | 12 | |
 | TC-SI-11 | Open `/api/auth/canva/callback` directly | Back on the Canva page with a readable error, not a crash or 404 | 14 | |
 

@@ -1,20 +1,31 @@
-// Sign-in for Canva's MCP server (https://mcp.canva.com/mcp), which has the design editor
-// (boxes, text, arrows…). It's a separate sign-in from the REST API one (canva-auth.ts): Canva
-// issues different tokens for the two.
+// Sign-in for Canva MCP (Canva's AI tools, incl. the design editor: boxes, text, arrows…).
+// It's a separate sign-in from the Canva REST API one (canva-auth.ts), with its own Connect button,
+// callback (/api/auth/canva-mcp/callback) and cookies. Two routes, chosen by CANVA_MCP_USE_PORTAL_APP:
 //
-// The app registers itself with Canva's MCP server once (OAuth dynamic client registration; Canva
-// calls this deprecated but still supported) and keeps the client ID in .canva-mcp-client.json
-// (or CANVA_MCP_CLIENT_ID). Users then sign in with PKCE; tokens live in httpOnly cookies.
+//  Portal route (CANVA_MCP_USE_PORTAL_APP=true):
+//    Your Developer Portal app with "Canva MCP" turned on. Signs in through Canva's normal OAuth
+//    (www.canva.com) with your client ID + secret; tools at api.canva.com/connect/v1/mcp.
+//    Works on a deployed site. Like every Developer Portal app, only the owner (and collaborators) can
+//    sign in until the app is released ("The client ID is invalid" for anyone else).
+//
+//  Self-registered route (setting off):
+//    The app registers itself with mcp.canva.com (OAuth dynamic client registration; deprecated but
+//    supported) and keeps the client ID in .canva-mcp-client.json (or CANVA_MCP_CLIENT_ID). Doesn't use
+//    your Developer Portal app, so any Canva account can sign in, but mcp.canva.com only accepts
+//    127.0.0.1-style return addresses from such clients: works locally, not on a deployed site
+//    ("Invalid redirect URI") unless Canva allowlists it (waitlist).
+//
+// Users sign in with PKCE; tokens live in httpOnly cookies.
 import { readFile, writeFile } from "node:fs/promises";
-import { appOrigin } from "./canva-auth";
+import { AUTHORIZE_URL, SCOPES, appOrigin, requestToken } from "./canva-auth";
 
 export const MCP_URL = "https://mcp.canva.com/mcp"; // self-registered / waitlist clients
-// Developer Portal apps with "Canva MCP" turned on use this server instead, and sign in through Canva's
-// normal OAuth (www.canva.com, same as the REST API), so the REST sign-in's token works here.
-export const PORTAL_MCP_URL = "https://api.canva.com/connect/v1/mcp";
+export const PORTAL_MCP_URL = "https://api.canva.com/connect/v1/mcp"; // Developer Portal apps
 const AUTH_BASE = "https://mcp.canva.com";
 const CLIENT_FILE = ".canva-mcp-client.json";
 
+// Scopes for the self-registered route (mcp.canva.com lists these as supported). The portal route uses
+// the REST sign-in's SCOPES, which are ticked on your app; Canva refuses scopes that aren't ticked.
 export const MCP_SCOPES = [
   "profile:read",
   "design:meta:read",
@@ -34,25 +45,41 @@ const COOKIE = {
   refresh: "canva_mcp_refresh",
   expires: "canva_mcp_expires",
   verifier: "canva_mcp_verifier",
-  client: "canva_mcp_client", // which registration (client ID) this sign-in belongs to
+  client: "canva_mcp_client", // which client (portal app or self-registration) this sign-in belongs to
 } as const;
 export const MCP_VERIFIER_COOKIE = COOKIE.verifier;
 
-/** Callback for the editor sign-in on this request's address (127.0.0.1 locally, your domain when deployed). */
+/** CANVA_MCP_USE_PORTAL_APP as a yes/no, forgiving about case, quotes and spaces ("true", "TRUE", "1", "yes"). */
+export function portalSetting(): boolean {
+  const value = (process.env.CANVA_MCP_USE_PORTAL_APP ?? "").trim().replace(/^["']|["']$/g, "").toLowerCase();
+  return ["true", "1", "yes"].includes(value);
+}
+
+/** True when the MCP sign-in uses your Developer Portal app (see the top of this file). */
+export function usePortalApp(): boolean {
+  return portalSetting() && Boolean(process.env.CANVA_CLIENT_ID && process.env.CANVA_CLIENT_SECRET);
+}
+
+/** The MCP server to call for a sign-in made with this client ID. */
+export function mcpServerFor(clientId: string | undefined): string {
+  return clientId && clientId === process.env.CANVA_CLIENT_ID ? PORTAL_MCP_URL : MCP_URL;
+}
+
+/** Callback for the MCP sign-in on this request's address (127.0.0.1 locally, your domain when deployed). */
 export function mcpRedirectUri(request?: Request): string {
   return process.env.CANVA_MCP_REDIRECT_URI || `${appOrigin(request)}/api/auth/canva-mcp/callback`;
 }
 
-// Registrations are per callback URL (local and deployed each need their own). Kept in memory and,
-// where the disk is writable (local dev), in .canva-mcp-client.json as { [redirect_uri]: client_id }.
+// Self-registrations are per callback URL. Kept in memory and, where the disk is writable (local dev),
+// in .canva-mcp-client.json as { [redirect_uri]: client_id }.
 const registered = new Map<string, string>();
 
 /**
- * The app's client ID at Canva's MCP server for this callback URL, registering the app the first time.
- * On Vercel the disk isn't writable, so set CANVA_MCP_CLIENT_ID (registered for the deployed callback)
- * to avoid a new registration after every cold start.
+ * The client ID for the MCP sign-in: your Developer Portal app (portal route), or the app's
+ * self-registration at mcp.canva.com for this callback URL, registering the first time.
  */
 export async function mcpClientId(redirect: string): Promise<string> {
+  if (usePortalApp()) return process.env.CANVA_CLIENT_ID!;
   if (process.env.CANVA_MCP_CLIENT_ID) return process.env.CANVA_MCP_CLIENT_ID;
   if (registered.has(redirect)) return registered.get(redirect)!;
   let saved: Record<string, string> = {};
@@ -86,6 +113,18 @@ export async function mcpClientId(redirect: string): Promise<string> {
 }
 
 export function mcpAuthorizeUrl(clientId: string, redirect: string, challenge: string, state: string): string {
+  if (clientId === process.env.CANVA_CLIENT_ID) {
+    // Portal route: Canva's normal sign-in, like the REST API's
+    const url = new URL(AUTHORIZE_URL);
+    url.searchParams.set("code_challenge", challenge);
+    url.searchParams.set("code_challenge_method", "s256");
+    url.searchParams.set("scope", SCOPES.join(" "));
+    url.searchParams.set("response_type", "code");
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("redirect_uri", redirect);
+    url.searchParams.set("state", state);
+    return url.toString();
+  }
   const url = new URL(`${AUTH_BASE}/authorize`);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", clientId);
@@ -100,25 +139,11 @@ export function mcpAuthorizeUrl(clientId: string, redirect: string, challenge: s
 
 type TokenResponse = { access_token: string; refresh_token?: string; expires_in?: number };
 
-/**
- * True when CANVA_MCP_USE_PORTAL_APP=true: your Developer Portal app has "Canva MCP" turned on, so the
- * normal Canva sign-in (www.canva.com OAuth, canva-auth.ts) also covers Canva's MCP tools at
- * PORTAL_MCP_URL, and the self-registered editor sign-in below isn't used. This is Canva's supported
- * route, and the one that works on a deployed site: mcp.canva.com only accepts 127.0.0.1 return
- * addresses from self-registered clients.
- */
-export function usePortalApp(): boolean {
-  return portalSetting() && Boolean(process.env.CANVA_CLIENT_ID && process.env.CANVA_CLIENT_SECRET);
-}
-
-/** CANVA_MCP_USE_PORTAL_APP as a yes/no, forgiving about case, quotes and spaces ("true", "TRUE", "1", "yes"). */
-export function portalSetting(): boolean {
-  const value = (process.env.CANVA_MCP_USE_PORTAL_APP ?? "").trim().replace(/^["']|["']$/g, "").toLowerCase();
-  return ["true", "1", "yes"].includes(value);
-}
-
-/** Token request at Canva's MCP server, for the registration (clientId) the user signed in with. */
+/** Token request for the MCP sign-in, for the client (portal app or self-registration) it was made with. */
 export async function requestMcpToken(clientId: string, params: Record<string, string>): Promise<TokenResponse> {
+  // Portal route: same token endpoint and client secret as the REST sign-in
+  if (clientId === process.env.CANVA_CLIENT_ID) return requestToken(params);
+
   const res = await fetch(`${AUTH_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -145,7 +170,7 @@ const cookieOptions = (maxAge: number) => ({
 export function saveMcpTokens(cookies: CookieWriter, token: TokenResponse, clientId: string) {
   // Browsers drop cookies over ~4 KB; fail loudly rather than lose the sign-in silently
   if (token.access_token.length > 3800 || (token.refresh_token?.length ?? 0) > 3800) {
-    throw new Error("Canva's editor token is too large to keep in a cookie. Tell the developer (needs a server-side token store).");
+    throw new Error("Canva's MCP token is too large to keep in a cookie. Tell the developer (needs a server-side token store).");
   }
   const expiresIn = token.expires_in ?? 60 * 60;
   cookies.set(COOKIE.access, token.access_token, cookieOptions(expiresIn));
@@ -163,7 +188,12 @@ export function isMcpConnected(cookies: Pick<CookieStore, "get">): boolean {
   return Boolean(cookies.get(COOKIE.access)?.value || cookies.get(COOKIE.refresh)?.value);
 }
 
-/** A usable MCP access token (renewed when it has expired), or null when the user must connect the editor. */
+/** The client ID the current MCP sign-in was made with (decides which MCP server to call). */
+export function mcpSignInClient(cookies: Pick<CookieStore, "get">): string | undefined {
+  return cookies.get(COOKIE.client)?.value;
+}
+
+/** A usable MCP access token (renewed when it has expired), or null when the user must connect Canva MCP. */
 export async function getMcpAccessToken(cookies: CookieStore): Promise<string | null> {
   const access = cookies.get(COOKIE.access)?.value;
   const expires = Number(cookies.get(COOKIE.expires)?.value || 0);
@@ -171,13 +201,13 @@ export async function getMcpAccessToken(cookies: CookieStore): Promise<string | 
   const refresh = cookies.get(COOKIE.refresh)?.value;
   if (!refresh) return access ?? null;
   try {
-    // Sign-ins from before the client cookie existed were made with the local registration
+    // Sign-ins from before the client cookie existed were made with the local self-registration
     const clientId = cookies.get(COOKIE.client)?.value || (await mcpClientId(mcpRedirectUri()));
     const token = await requestMcpToken(clientId, { grant_type: "refresh_token", refresh_token: refresh });
     saveMcpTokens(cookies, token, clientId);
     return token.access_token;
   } catch (err) {
-    console.error("[canva editor] couldn't renew the sign-in:", err instanceof Error ? err.message : err);
+    console.error("[canva mcp] couldn't renew the sign-in:", err instanceof Error ? err.message : err);
     lastRefreshError.mcp = err instanceof Error ? err.message : String(err);
     return null;
   }

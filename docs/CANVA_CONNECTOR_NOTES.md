@@ -84,6 +84,7 @@ Status: **Fixed**, **Open**, or **Limit** (a Canva rule we work within).
 | 33 | Edit attempt left no trace | Early stops weren't logged | Every request and early stop logged to `.canva-debug.log` (local only) | Fixed |
 | 34 | Paid (premium) elements in designs | Canva's AI may use Pro elements; usable per the user's plan | Explained; free plans see watermarks, exports may fail | Limit |
 | 35 | "Limit for new designs" message | Canva rate limit (~20 creations/min) or AI allowance | Auto-retry on rate limits; app notices with reason and reset time; Gemini prefers edits over regenerating | Fixed / Limit |
+| 36 | Another Canva account: "The client ID is invalid." | Unreleased Canva apps are owner-only ("single-user access") until released or shared with team collaborators | Add collaborators (same Canva team, Teams/Enterprise plan), or submit for review and release | Limit |
 
 ### Open items
 
@@ -95,6 +96,6 @@ Status: **Fixed**, **Open**, or **Limit** (a Canva rule we work within).
 | D | `mfa_backup_codes.txt` in the project folder | Git-ignored, but move it somewhere safe |
 | E | Local setup still uses self-registration | Add `CANVA_MCP_USE_PORTAL_APP=true` to `.env.local` to match the live site |
 | F | Visual check of the limit notices | Logic tested; on-page look not yet seen |
-| G | Can other Canva users sign in? | Unreviewed public integration: not confirmed; test with a user outside your Canva team |
+| G | Other Canva users can't sign in yet | Confirmed (issue 36). Needs collaborators or Canva review + release; review rejects public apps that use preview APIs, so remove the REST preview features first |
 | H | Font family changes | Not confirmed the editor tools can change font family |
 | I | Token cookie size and storage | Tokens must stay under ~4 KB; no server-side store (fine for a demo) |
