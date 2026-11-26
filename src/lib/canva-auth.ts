@@ -151,3 +151,21 @@ export async function revokeToken(token: string) {
 }
 
 export const REFRESH_COOKIE = COOKIE.refresh;
+
+// Where the browser goes after a Canva sign-in: the page that started it (only pages listed here).
+export const RETURN_COOKIE = "canva_return";
+const RETURN_PATHS = ["/connector/canva", "/workflow/brand-studio"];
+
+/** Remember ?return=<page> from a sign-in start, if it's one of the app's own pages. */
+export function rememberReturn(request: Request, response: { cookies: { set: (name: string, value: string, options: object) => void } }) {
+  const path = new URL(request.url).searchParams.get("return");
+  if (path && RETURN_PATHS.includes(path)) {
+    response.cookies.set(RETURN_COOKIE, path, { httpOnly: true, sameSite: "lax", maxAge: 15 * 60, path: "/" });
+  }
+}
+
+/** The page to go back to after sign-in (default: the Canva chat). */
+export function returnPath(cookieStore: { get: (name: string) => { value: string } | undefined }): string {
+  const path = cookieStore.get(RETURN_COOKIE)?.value;
+  return path && RETURN_PATHS.includes(path) ? path : "/connector/canva";
+}

@@ -98,7 +98,7 @@ export async function callCanvaMcpToolWaiting(
   args: Record<string, unknown>,
   available: Set<string>,
   timeoutMs = 180_000,
-  onRetry?: () => void,
+  onRetry?: (seconds: number) => void,
 ) {
   let result = await callCanvaMcpTool(client, name, args, onRetry);
   const pollTool = pollToolFor(name, available);
@@ -139,6 +139,20 @@ export function isQuotaExhausted(text: string): boolean {
 }
 
 export const RATE_LIMIT_RETRY_SECONDS = 20;
+const RATE_LIMIT_RETRIES = 2; // waits of 20 s, then 40 s
+
+// Tools that create with Canva AI (they share Canva's per-minute creation limit). Calls to them are spaced
+// out so a burst (one wireframe plus several images in the Brand Studio) doesn't trip the limit.
+const CREATION_TOOLS = new Set(["create-design", "generate-design", "generate-image", "resize-design", "copy-design", "import-design-from-url", "create-design-from-brand-template", "create-design-from-candidate"]);
+const CREATION_GAP_MS = 4_000;
+let lastCreation = 0;
+
+async function paceCreation(name: string) {
+  if (!CREATION_TOOLS.has(name)) return;
+  const wait = lastCreation + CREATION_GAP_MS - Date.now();
+  lastCreation = Math.max(Date.now(), lastCreation + CREATION_GAP_MS);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+}
 
 /** The reset time Canva gives for a limit, if any (ISO date-time), e.g. "resets_at": "2026-11-01T00:00:00Z". */
 export function limitResetAt(text: string): string | undefined {
@@ -155,20 +169,26 @@ export function limitResetAt(text: string): string | undefined {
 
 /**
  * Run one Canva MCP tool; returns its text output (images are noted, not embedded).
- * A "too many requests" answer gets one retry after RATE_LIMIT_RETRY_SECONDS; onRetry lets the chat tell the user.
+ * A "too many requests" answer is retried up to RATE_LIMIT_RETRIES times, waiting longer each time
+ * (RATE_LIMIT_RETRY_SECONDS, then double); onRetry lets the chat tell the user. A used-up AI allowance isn't retried.
  */
 export async function callCanvaMcpTool(
   client: Client,
   name: string,
   args: Record<string, unknown>,
-  onRetry?: () => void,
+  onRetry?: (seconds: number) => void,
 ) {
-  const first = await callCanvaMcpToolOnce(client, name, args);
-  if (!first.isError || !isRateLimited(first.text) || isQuotaExhausted(first.text)) return first;
-  // Per-minute limit (e.g. ~20 design creations a minute): wait it out once instead of failing
-  onRetry?.();
-  await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_RETRY_SECONDS * 1000));
-  return callCanvaMcpToolOnce(client, name, args);
+  await paceCreation(name);
+  let result = await callCanvaMcpToolOnce(client, name, args);
+  for (let retry = 1; retry <= RATE_LIMIT_RETRIES; retry++) {
+    if (!result.isError || !isRateLimited(result.text) || isQuotaExhausted(result.text)) return result;
+    // Per-minute limit (e.g. ~20 design creations a minute): wait it out instead of failing
+    const seconds = RATE_LIMIT_RETRY_SECONDS * retry;
+    onRetry?.(seconds);
+    await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+    result = await callCanvaMcpToolOnce(client, name, args);
+  }
+  return result;
 }
 
 async function callCanvaMcpToolOnce(client: Client, name: string, args: Record<string, unknown>) {

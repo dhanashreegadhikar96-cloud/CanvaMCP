@@ -208,13 +208,18 @@ function ConnectDialog({
   editor,
   onClose,
   onDisconnect,
+  mcpOnly = false,
 }: {
   error: string;
   rest: boolean;
   editor: boolean;
   onClose: () => void;
   onDisconnect: (which: Which) => void;
+  /** Offer only the Canva MCP sign-in (all the Brand Studio needs). */
+  mcpOnly?: boolean;
 }) {
+  // Come back to this page (the Canva chat or the Brand Studio) after signing in
+  const ret = typeof window === "undefined" ? "" : `?return=${encodeURIComponent(window.location.pathname)}`;
   return (
     <div className="ns-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="ns-modal" role="dialog" aria-modal="true" aria-labelledby="connectTitle">
@@ -226,20 +231,20 @@ function ConnectDialog({
         </div>
         {error && <p className="ns-modal-error">{error}</p>}
         <div className="connect-rows">
-          <ConnectRow
+          {!mcpOnly && <ConnectRow
             icon="fa-solid fa-palette"
             name="Canva (REST API)"
             detail="Search, folders, export, generate"
             connected={rest}
-            href="/api/auth/canva/login"
+            href={`/api/auth/canva/login${ret}`}
             onDisconnect={() => onDisconnect("rest")}
-          />
+          />}
           <ConnectRow
             icon="fa-solid fa-pen-ruler"
             name="Canva MCP"
             detail="Canva AI tools, incl. editing designs"
             connected={editor}
-            href="/api/auth/canva-mcp/login"
+            href={`/api/auth/canva-mcp/login${ret}`}
             onDisconnect={() => onDisconnect("mcp")}
           />
         </div>
@@ -248,12 +253,30 @@ function ConnectDialog({
   );
 }
 
+type Suggestion = { title: string; desc: string; prompt: string };
+
 export default function CanvaChat({
   connected: restConnected,
   editorConnected,
+  workflow,
+  suggestions = SUGGESTIONS,
+  heading = "What's the Move",
+  autoSend,
+  embedded = false,
+  mcpOnly = false,
 }: {
   connected: boolean;
   editorConnected: boolean;
+  /** Workflow whose brand rules the server adds to the chat (e.g. "deasra" in the Brand Studio). */
+  workflow?: string;
+  suggestions?: Suggestion[];
+  heading?: string;
+  /** A message to send from the page around the chat (e.g. "Build in Canva"); a new id sends it again. */
+  autoSend?: { id: number; text: string } | null;
+  /** Inside another page: no Home hand-off, no autofocus. */
+  embedded?: boolean;
+  /** Connect dialog offers only Canva MCP. */
+  mcpOnly?: boolean;
 }) {
   const initiallyConnected = restConnected || editorConnected;
   const [items, setItems] = useState<Item[]>([]);
@@ -338,7 +361,7 @@ export default function CanvaChat({
       const res = await fetch("/api/canva/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history.current }),
+        body: JSON.stringify({ messages: history.current, workflow }),
         signal: controller.signal,
       });
       if (!res.ok || !res.body) throw new Error(`The chat service returned ${res.status}.`);
@@ -386,6 +409,7 @@ export default function CanvaChat({
   // A message typed on Home arrives here. If Canva isn't connected yet it waits in the ask bar
   // (and in storage, so it's sent once the user is back from connecting).
   useEffect(() => {
+    if (embedded) return;
     let prompt: string | null = null;
     try {
       prompt = sessionStorage.getItem(HANDOFF_KEY);
@@ -401,18 +425,24 @@ export default function CanvaChat({
   }, []);
 
   useEffect(() => {
-    threadEnd.current?.scrollIntoView({ block: "end" });
-  }, [items]);
+    if (autoSend?.text) send(autoSend.text);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSend?.id]);
+
+  useEffect(() => {
+    if (embedded && items.length === 0) return;
+    threadEnd.current?.scrollIntoView({ block: embedded ? "nearest" : "end" });
+  }, [items, embedded]);
 
   return (
-    <section className="page-view chat-page active-view">
+    <section className={embedded ? "chat-page chat-page--embedded" : "page-view chat-page active-view"}>
 
       <div className="chat-thread">
         {items.length === 0 ? (
           <div className="assistant-welcome">
-            <h1 className="assistant-heading">What&apos;s the Move</h1>
+            <h1 className="assistant-heading">{heading}</h1>
             <div className="composer-prompts">
-              {SUGGESTIONS.map((s) => (
+              {suggestions.map((s) => (
                 <button key={s.title} type="button" className="composer-prompt" onClick={() => send(s.prompt)} disabled={busy}>
                   <div className="composer-prompt-title">{s.title}</div>
                   <div className="composer-prompt-desc">{s.desc}</div>
@@ -495,7 +525,7 @@ export default function CanvaChat({
             aria-label="Message the Canva connector"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            autoFocus
+            autoFocus={!embedded}
           />
           {busy ? (
             <button type="button" className="composer-send composer-send--stop" title="Stop" onClick={() => abort.current?.abort()}>
@@ -511,7 +541,7 @@ export default function CanvaChat({
       </div>
 
       {showConnect && (
-        <ConnectDialog error={connectError} rest={rest} editor={editor} onClose={() => setShowConnect(false)} onDisconnect={disconnect} />
+        <ConnectDialog mcpOnly={mcpOnly} error={connectError} rest={rest} editor={editor} onClose={() => setShowConnect(false)} onDisconnect={disconnect} />
       )}
     </section>
   );

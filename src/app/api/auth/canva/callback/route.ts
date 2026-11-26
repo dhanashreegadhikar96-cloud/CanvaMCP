@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { CHAIN_COOKIE, VERIFIER_COOKIE, appOrigin, redirectUri, requestToken, saveTokens } from "@/lib/canva-auth";
+import { CHAIN_COOKIE, VERIFIER_COOKIE, appOrigin, redirectUri, requestToken, returnPath, saveTokens } from "@/lib/canva-auth";
 
 // Canva sends the user back here after the REST sign-in. Swap the code for tokens, keep them in
 // httpOnly cookies, then either continue to the Canva editor sign-in ("Connect Canva" does both)
@@ -8,7 +8,8 @@ import { CHAIN_COOKIE, VERIFIER_COOKIE, appOrigin, redirectUri, requestToken, sa
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const back = (query: string) => NextResponse.redirect(`${appOrigin(request)}/connector/canva?${query}`);
+  const cookieStore = await cookies();
+  const back = (query: string) => NextResponse.redirect(`${appOrigin(request)}${returnPath(cookieStore)}?${query}`);
   const fail = (message: string) => {
     const response = back(`error=${encodeURIComponent(message)}`);
     response.cookies.delete(CHAIN_COOKIE);
@@ -23,7 +24,6 @@ export async function GET(request: Request) {
   const code = url.searchParams.get("code");
   if (!code) return fail("Canva didn't send an authorization code. Try connecting again.");
 
-  const cookieStore = await cookies();
   const [state, verifier] = (cookieStore.get(VERIFIER_COOKIE)?.value || "").split(".");
   if (!verifier) return fail("The sign-in took too long or started on a different address. Try connecting again.");
   if (state !== url.searchParams.get("state")) return fail("Sign-in check failed. Try connecting again.");

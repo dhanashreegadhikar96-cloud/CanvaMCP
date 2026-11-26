@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { appOrigin } from "@/lib/canva-auth";
+import { appOrigin, rememberReturn } from "@/lib/canva-auth";
 import { MCP_VERIFIER_COOKIE, mcpAuthorizeUrl, mcpClientId, mcpRedirectUri } from "@/lib/canva-mcp-auth";
 
 // Starts "Connect" for Canva MCP: its own sign-in (PKCE), separate from the Canva REST API one.
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   // Locally, restart on 127.0.0.1 if the browser used localhost, so the cookie is where Canva returns to
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
   if (host && host !== new URL(origin).host) {
-    return NextResponse.redirect(`${origin}/api/auth/canva-mcp/login`);
+    return NextResponse.redirect(`${origin}/api/auth/canva-mcp/login${new URL(request.url).search}`);
   }
 
   const redirect = mcpRedirectUri(request);
@@ -35,5 +35,6 @@ export async function GET(request: Request) {
     maxAge: 10 * 60,
     path: "/",
   });
+  rememberReturn(request, response);
   return response;
 }

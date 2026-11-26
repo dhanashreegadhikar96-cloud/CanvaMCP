@@ -2,10 +2,11 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { cookies } from "next/headers";
 import * as canva from "@/lib/canva";
 import { getAccessToken, refreshErrors } from "@/lib/canva-auth";
+import { workflowContext } from "@/lib/brand/plan";
+import { GeminiLimitError, generateWithRetry } from "@/lib/gemini";
 import { getMcpAccessToken, lastRefreshError, mcpServerFor, mcpSignInClient } from "@/lib/canva-mcp-auth";
 import {
   McpAuthError,
-  RATE_LIMIT_RETRY_SECONDS,
   callCanvaMcpToolWaiting,
   connectCanvaMcp,
   isQuotaExhausted,
@@ -482,8 +483,11 @@ async function runCanvaTool(name: string, args: Record<string, any>, token: stri
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const body = (await request.json()) as { messages?: any[] };
+  // workflow: "deasra" when the chat runs inside the Brand Studio; adds deAsra's brand rules (from the
+  // server-side profile, never from the request) to the instructions.
+  const body = (await request.json()) as { messages?: any[]; workflow?: string };
   const history = body.messages ?? [];
+  const brandRules = body.workflow === "deasra" ? `\n\n${workflowContext()}` : "";
 
   // From "Connect Canva" (httpOnly cookies), renewed here when it has expired
   const canvaToken = await getAccessToken(cookieStore);
@@ -563,12 +567,12 @@ export async function POST(request: Request) {
           debugLog({ editorServer: mcpServer, editorTools: mcp.tools.map((t) => t.name) });
           const available = new Set(mcp.tools.map((t) => t.name));
           execute = async (name, args) => {
-            const { text, isError } = await callCanvaMcpToolWaiting(client, name, args, available, undefined, () =>
+            const { text, isError } = await callCanvaMcpToolWaiting(client, name, args, available, undefined, (seconds) =>
               send({
                 type: "notice",
                 tone: "info",
                 title: "Canva is busy",
-                text: `Too many requests in a short time. Waiting ${RATE_LIMIT_RETRY_SECONDS} seconds, then trying again…`,
+                text: `Too many requests in a short time. Waiting ${seconds} seconds, then trying again…`,
               }),
             );
             debugLog({ editorTool: name, args, isError, result: text.slice(0, 2000) });
@@ -598,14 +602,24 @@ export async function POST(request: Request) {
         while (currentTurn < maxTurns) {
           currentTurn++;
 
-          const response = await ai.models.generateContent({
-            model,
-            contents,
-            config: {
-              systemInstruction,
-              tools: [{ functionDeclarations: declarations }],
+          const response = await generateWithRetry(
+            ai,
+            {
+              model,
+              contents,
+              config: {
+                systemInstruction: systemInstruction + brandRules,
+                tools: [{ functionDeclarations: declarations }],
+              },
             },
-          });
+            (seconds) =>
+              send({
+                type: "notice",
+                tone: "info",
+                title: "Gemini is busy",
+                text: `The AI model's per-minute limit was reached. Waiting ${seconds} seconds, then continuing…`,
+              }),
+          );
 
           const candidate = response.candidates?.[0];
           if (!candidate?.content) {
@@ -696,7 +710,9 @@ export async function POST(request: Request) {
         send({ type: "done", messages: contents.slice(turnStart) });
       } catch (err) {
         debugLog({ chatError: err instanceof Error ? err.message : String(err), status: (err as any)?.status });
-        if (err instanceof canva.CanvaApiError && err.status === 401) {
+        if (err instanceof GeminiLimitError) {
+          send({ type: "error", message: err.message });
+        } else if (err instanceof canva.CanvaApiError && err.status === 401) {
           send({ type: "error", message: "Your Canva connection has expired. Connect again to continue.", connect: true });
         } else if (err instanceof McpAuthError || (mcp && /401|unauthori[sz]ed|invalid_token/i.test(String((err as any)?.message)))) {
           const detail = String((err as any)?.message ?? "").slice(0, 300);

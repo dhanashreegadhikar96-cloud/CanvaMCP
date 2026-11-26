@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { AUTHORIZE_URL, SCOPES, VERIFIER_COOKIE, appOrigin, credentials, redirectUri } from "@/lib/canva-auth";
+import { AUTHORIZE_URL, SCOPES, VERIFIER_COOKIE, appOrigin, credentials, redirectUri, rememberReturn } from "@/lib/canva-auth";
 
 // Starts "Connect Canva": sends the browser to Canva's sign-in with a PKCE challenge.
 
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   // localhost, restart sign-in on 127.0.0.1 so the verifier cookie is on the host Canva returns to.
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
   if (host && host !== new URL(origin).host) {
-    return NextResponse.redirect(`${origin}/api/auth/canva/login`);
+    return NextResponse.redirect(`${origin}/api/auth/canva/login${new URL(request.url).search}`);
   }
 
   if (!credentials()) {
@@ -40,5 +40,6 @@ export async function GET(request: Request) {
     maxAge: 10 * 60,
     path: "/",
   });
+  rememberReturn(request, response);
   return response;
 }
